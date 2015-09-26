@@ -10,11 +10,23 @@
 #include "os.log.h"
 using namespace imajuscule;
 
+#ifdef _WIN32
+int setenv(const char *name, const char *value, int overwrite)
+{
+    int errcode = 0;
+    if ( !overwrite ) {
+        size_t envsize = 0;
+        errcode = getenv_s(&envsize, NULL, 0, name);
+        if ( errcode || envsize ) return errcode;
+    }
+    return _putenv_s(name, value);
+}
+#endif
 
-#define SAMPLE_RATE  (44100)
-#define FRAMES_PER_BUFFER (16)
-#define NUM_SECONDS     (0.001)
-#define NUM_CHANNELS    (1)
+const int SAMPLE_RATE(44100);
+const int FRAMES_PER_BUFFER(16);
+const float NUM_SECONDS(0.001f);
+const int NUM_CHANNELS(1);
 /* #define DITHER_FLAG     (paDitherOff)  */
 #define DITHER_FLAG     (0) /**/
 
@@ -108,6 +120,7 @@ void Audio::Init()
         return;
     }
 
+    // set minimum latency env var to speed things up
     const char * lat = "PA_MIN_LATENCY_MSEC";
     const char * latVal = "1";
     int erri = setenv( lat, latVal, true);
@@ -117,12 +130,27 @@ void Audio::Init()
         A(0);
     }
     
-    const char * test = getenv(lat);
+    // verify that env var was set
+#ifdef _WIN32
+    char * test=0; 
+    size_t sz=0;
+    if (0 != _dupenv_s(&test, &sz, lat) )
+    {
+        test = 0;
+    }
+#else
+    const char * test = getenv (lat);
+#endif
+
     if_A(test)
     {
         A(!strcmp(test, latVal));
+#ifdef _WIN32
+        free(test);
+#endif
     }
-    
+
+
     LG(INFO, "Audio::Init : initializing %s", Pa_GetVersionText());
     PaError err = Pa_Initialize();
     if(err == paNoError)
@@ -132,7 +160,7 @@ void Audio::Init()
         
         LG(INFO,"%d host apis", Pa_GetHostApiCount());
         
-        data.maxFrameIndex = NUM_SECONDS * SAMPLE_RATE; /* Record for a few seconds. */
+        data.maxFrameIndex = (unsigned long) (NUM_SECONDS * SAMPLE_RATE); /* Record for a few seconds. */
         data.numSamples = data.maxFrameIndex * NUM_CHANNELS;
         
         if(data.recordedSamples)
@@ -145,7 +173,7 @@ void Audio::Init()
             A(0);
             return;
         }
-        for( int i=0; i<data.numSamples; i++ ) data.recordedSamples[i] = 0;
+        for( auto i=0; i<data.numSamples; i++ ) data.recordedSamples[i] = 0;
         
         PaStreamParameters inputParameters;
         inputParameters.device = Pa_GetDefaultInputDevice(); /* default input device */
