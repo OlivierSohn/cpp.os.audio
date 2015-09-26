@@ -31,7 +31,7 @@ namespace imajuscule
         unsigned long maxFrameIndex = 0;
         unsigned long numSamples = 0;
         SAMPLE      *recordedSamples = NULL;
-        std::atomic_bool used;
+        std::atomic_bool used { false };
     };
     
     class Audio
