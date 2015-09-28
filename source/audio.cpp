@@ -2,6 +2,7 @@
 #include <string.h>
 #include <cerrno>
 #include <algorithm>
+#include <cmath>
 
 #include "audio.h"
 // SDL does not have audio recording yet so I use portaudio
@@ -47,7 +48,8 @@ static int recordCallback( const void *inputBuffer, void *outputBuffer,
 {
     paTestData *data = (paTestData*)userData;
     const SAMPLE *rptr = (const SAMPLE*)inputBuffer;
-    SAMPLE *wptr = &data->recordedSamples[/*data->frameIndex * NUM_CHANNELS*/0];
+    /*
+    SAMPLE *wptr = &data->recordedSamples[0]; // or at data->frameIndex * NUM_CHANNELS to append after
     data->lastWriteSampleCount = framesPerBuffer;
 
     if(framesPerBuffer > data->maxFrameIndex)
@@ -56,6 +58,7 @@ static int recordCallback( const void *inputBuffer, void *outputBuffer,
         rptr += framesPerBuffer - data->maxFrameIndex; // to write the end of the buffer
     }
     long framesToCalc(data->lastWriteSampleCount);
+    */
     //unsigned long framesLeft = data->maxFrameIndex - data->frameIndex;
     
     (void) outputBuffer; /* Prevent unused variable warnings. */
@@ -73,21 +76,27 @@ static int recordCallback( const void *inputBuffer, void *outputBuffer,
         c++;
         // The lock succeeded
         
-        if( inputBuffer == NULL )
+        /*if( inputBuffer == NULL )
         {
             for( long i=0; i<framesToCalc; i++ )
             {
-                *wptr++ = SAMPLE_SILENCE;  /* left */
-                if( NUM_CHANNELS == 2 ) *wptr++ = SAMPLE_SILENCE;  /* right */
+                *wptr++ = SAMPLE_SILENCE;  // left
+                if( NUM_CHANNELS == 2 ) *wptr++ = SAMPLE_SILENCE;  // right
             }
         }
         else
         {
             for( long i=0; i<framesToCalc; i++ )
             {
-                *wptr++ = *rptr++;  /* left */
-                if( NUM_CHANNELS == 2 ) *wptr++ = *rptr++;  /* right */
+                *wptr++ = *rptr++;  // left
+                if( NUM_CHANNELS == 2 ) *wptr++ = *rptr++;  // right
             }
+        }
+        */
+        if(inputBuffer)
+        {
+            for( long i=0; i<framesPerBuffer; i++ )
+                data->maxAbsSinceLastRead = std::max(data->maxAbsSinceLastRead, std::abs(*rptr++));
         }
         
         data->used.store(false, std::memory_order_release);
@@ -160,7 +169,8 @@ void Audio::Init()
         
         LG(INFO,"%d host apis", Pa_GetHostApiCount());
         
-        data.maxFrameIndex = (unsigned long) (NUM_SECONDS * SAMPLE_RATE); /* Record for a few seconds. */
+        /*
+        data.maxFrameIndex = (unsigned long) (NUM_SECONDS * SAMPLE_RATE); // Record for a few seconds.
         data.numSamples = data.maxFrameIndex * NUM_CHANNELS;
         
         if(data.recordedSamples)
@@ -174,6 +184,7 @@ void Audio::Init()
             return;
         }
         for( auto i=0; i<data.numSamples; i++ ) data.recordedSamples[i] = 0;
+        */
         
         PaStreamParameters inputParameters;
         inputParameters.device = Pa_GetDefaultInputDevice(); /* default input device */
@@ -264,31 +275,27 @@ void Audio::TearDown()
         LG(ERR, "Audio::TearDown : was not initialized");
     }
 }
-float Audio::get()
+float Audio::get(float guiTime)
 {
-    // TODO compute only once per modeltime
     if(stream)
     {
-        SAMPLE max(0), average(0);
-
-        // critical section
-        while (data.used.exchange(true)) { }
-        
-        for(auto i = 0; i< data.lastWriteSampleCount; i++)
+        if(!computedOnce_ || timeComputation_ != guiTime)
         {
-            SAMPLE val = data.recordedSamples[i];
-            max = std::max( val, max);
-            if(i==0)
-                average = val;
-            else
-                average += val;
+            computedOnce_ = true;
+            timeComputation_ = guiTime;
+
+            // NOTE we should make maxAbsSinceLastRead atomic instead and not use data.used at all, to be more efficient
+            
+            // critical section
+            while (data.used.exchange(true)) { }
+            
+            value_ = data.maxAbsSinceLastRead;
+            data.maxAbsSinceLastRead = 0.f;
+            
+            data.used = false; // unlock
         }
 
-        data.used = false; // unlock
-
-        average /= data.lastWriteSampleCount;
-
-        return average;
+        return value_;
     }
     
     return 0.f;

@@ -27,10 +27,11 @@ namespace imajuscule
 {
     struct paTestData
     {
-        unsigned long lastWriteSampleCount = 0;
+        /*unsigned long lastWriteSampleCount = 0;
         unsigned long maxFrameIndex = 0;
         unsigned long numSamples = 0;
-        SAMPLE      *recordedSamples = NULL;
+        SAMPLE      *recordedSamples = NULL;*/
+        SAMPLE maxAbsSinceLastRead = 0.f;
         std::atomic_bool used { false };
     };
     
@@ -40,7 +41,7 @@ namespace imajuscule
         static Audio & getInstance();
         void Init();
         void TearDown();
-        float get();
+        float get(float guiTime);
         ~Audio();
     private:
         Audio();
@@ -50,8 +51,8 @@ namespace imajuscule
         PaStream *stream = NULL;
         
         paTestData data;
-        bool bComputedOnce = false;
-        float timeComutation;
-        float value;
+        bool computedOnce_ = false;
+        float timeComputation_;
+        SAMPLE value_;
     };
 }
