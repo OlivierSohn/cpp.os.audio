@@ -7,6 +7,8 @@
 #include "cg.math.numeric.h"
 #include "cg.math.filter.h"
 
+#define DBG_SAMPLES 0
+
 /* Select sample format. */
 #if 1
 #define PA_SAMPLE_TYPE  paFloat32
@@ -47,7 +49,7 @@ namespace imajuscule
     // and we want to have at least 3 samplings per period of max frequency, so:
     constexpr static const float samples_per_max_freq_period = 8.f;
     constexpr static const float time_between_representative_samples = 1.f / (samples_per_max_freq_period * maxFreq);
-    constexpr static const int sampling_period = SAMPLE_RATE * time_between_representative_samples;
+    constexpr static const int sampling_period = (int)(((float)SAMPLE_RATE) * time_between_representative_samples + 0.5f);
 
     struct FreqAlgo
     {
@@ -187,8 +189,14 @@ namespace imajuscule
     };
     struct FreqFromZC : public FreqAlgo
     {
-        // use constant 0.01 instead of 0 to not record zero crossing related to noise
-        const SAMPLE upperZero = 0.01f;
+        // use constant epsilon instead of 0 to not record zero crossing related to noise
+        const SAMPLE upperZero =
+#ifdef _WIN32
+            0.005f // TODO make that user configurable (ask user to record noise)
+#else
+            0.01f
+#endif
+            ;
         
         bool needsLock () override {return true;}
         void computeWhileLocked() override;
@@ -342,6 +350,10 @@ namespace imajuscule
         FreqFromZC
             algo_freq;
         SAMPLE maxAbsSinceLastRead = 0.f;
+#if DBG_SAMPLES
+        unsigned int samplesSinceLastRead = 0;
+#endif
+
         slidingAverage avg;
 
         std::atomic_bool used { false };

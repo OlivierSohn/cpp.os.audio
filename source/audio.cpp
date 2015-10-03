@@ -72,6 +72,9 @@ void paTestData::step(const SAMPLE *rptr, unsigned long framesPerBuffer)
     // The lock succeeded
     if(rptr)
     {
+#if DBG_SAMPLES
+        samplesSinceLastRead += framesPerBuffer;
+#endif
         for( unsigned long i=0; i<framesPerBuffer; i++ )
         {
             auto val = *rptr++;
@@ -181,7 +184,15 @@ void Audio::Init()
         LG(INFO, "audio device : def. lilat %f", pi->defaultLowInputLatency);
         LG(INFO, "audio device : def. hilat %f", pi->defaultHighInputLatency);
 
-        inputParameters.suggestedLatency = 0.000001/*pi->defaultLowInputLatency*/;
+        inputParameters.suggestedLatency =
+#ifdef _WIN32
+            // on windows it's important to not set suggestedLatency too low, else samples are lost (for example only 16 are available per timestep)
+            pi->defaultLowInputLatency
+#else
+            0.000001
+#endif
+            ;
+
         inputParameters.hostApiSpecificStreamInfo = NULL;
         
         /* Record some audio. -------------------------------------------- */
@@ -263,12 +274,21 @@ Result Audio::getMaxAbs(float guiTime, float &value)
         // NOTE we could make maxAbsSinceLastRead atomic instead and not use data.used at all, to be more efficient
         float val = data.maxAbsSinceLastRead;
         data.maxAbsSinceLastRead = 0.f;
-        
+
+#if DBG_SAMPLES
+        unsigned int sam = data.samplesSinceLastRead;
+        data.samplesSinceLastRead = 0;
+#endif
+
         // unlock
         data.used = false;
-        
+
+#if DBG_SAMPLES
+        LG(INFO, "samples # %d", sam);
+#endif
         value = val;
         maxAbs_result.storeResultForTime(res, value, guiTime);
+
         return res;
     }
 }
@@ -612,7 +632,7 @@ void FreqFromZC::computeWhileLocked()
         // enable result if:
         // all periods were reconstructed from zero-crossing intervals
         // or the signal is loud enough to not be considered noise
-        if(data.count == positive_zeros_dist.size() || delta > 0.01f)
+        if(data.count == positive_zeros_dist.size() || delta > upperZero )
         {
             auto candidate = ((float)data.count) / ((float)data.total);
             candidate *= ((float)SAMPLE_RATE)/(float)sampling_period;
