@@ -185,13 +185,8 @@ void Audio::Init()
         LG(INFO, "audio device : def. hilat %f", pi->defaultHighInputLatency);
 
         inputParameters.suggestedLatency =
-#ifdef _WIN32
             // on windows it's important to not set suggestedLatency too low, else samples are lost (for example only 16 are available per timestep)
-            pi->defaultLowInputLatency
-#else
-            0.000001
-#endif
-            ;
+        pi->defaultLowInputLatency;
 
         inputParameters.hostApiSpecificStreamInfo = NULL;
         
