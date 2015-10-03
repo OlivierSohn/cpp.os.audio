@@ -275,6 +275,8 @@
 					"\"$(PROJECT_DIR)/../os.log/include\"",
 					"\"$(PROJECT_DIR)/include\"",
 					"\"$(PROJECT_DIR)/../tp.portaudio/include\"",
+					"\"$(PROJECT_DIR)/../cg.math/include\"",
+					"\"$(PROJECT_DIR)/../tp.kissfft/include\"",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				MTL_ENABLE_DEBUG_INFO = YES;
@@ -318,6 +320,8 @@
 					"\"$(PROJECT_DIR)/../os.log/include\"",
 					"\"$(PROJECT_DIR)/include\"",
 					"\"$(PROJECT_DIR)/../tp.portaudio/include\"",
+					"\"$(PROJECT_DIR)/../cg.math/include\"",
+					"\"$(PROJECT_DIR)/../tp.kissfft/include\"",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				MTL_ENABLE_DEBUG_INFO = NO;
