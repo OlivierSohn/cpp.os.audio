@@ -249,64 +249,53 @@ void Audio::TearDown()
         LG(ERR, "Audio::TearDown : was not initialized");
     }
 }
-float Audio::getMaxAbs(float guiTime)
+Result Audio::getMaxAbs(float guiTime, float &value)
 {
-    if(stream)
+    if(maxAbs_result.hasResultForTime(guiTime))
+        return maxAbs_result.result(value);
+    else
     {
-        if(maxAbs_result.hasResultForTime(guiTime))
-            return maxAbs_result.result();
-        else
-        {
-            // critical section
-            while (data.used.exchange(true)) { }
-            
-            // NOTE we could make maxAbsSinceLastRead atomic instead and not use data.used at all, to be more efficient
-            float value = data.maxAbsSinceLastRead;
-            data.maxAbsSinceLastRead = 0.f;
-            
-            // unlock
-            data.used = false;
-
-            maxAbs_result.storeResultForTime(value, guiTime);
-            
-            return value;
-        }
+        Result res = stream?Result::OK:Result::NOT_ENOUGH_DATA;
+        
+        // critical section
+        while (data.used.exchange(true)) { }
+        
+        // NOTE we could make maxAbsSinceLastRead atomic instead and not use data.used at all, to be more efficient
+        float val = data.maxAbsSinceLastRead;
+        data.maxAbsSinceLastRead = 0.f;
+        
+        // unlock
+        data.used = false;
+        
+        value = val;
+        maxAbs_result.storeResultForTime(res, value, guiTime);
+        return res;
     }
-    
-    return 0.f;
 }
 
 Result Audio::getFrequency(float guiTime, float &value)
 {
-    Result res = Result::NOT_ENOUGH_DATA;
-    
-    if(stream)
+    if(freq_result.hasResultForTime(guiTime))
     {
-        if(freq_result.hasResultForTime(guiTime))
-        {
-            value = freq_result.result();
-            res = Result::OK;
-        }
-        else
-        {
-            if(data.algo_freq.needsLock())
-            {
-                // critical section
-                while (data.used.exchange(true)) { }
-                
-                data.algo_freq.computeWhileLocked();
-                
-                // unlock
-                data.used = false;
-            }
-            
-            res = data.algo_freq.computeFrequency(value);
-            A(res == Result::OK);
-            freq_result.storeResultForTime(value, guiTime);
-        }
+        return freq_result.result(value);
     }
-    
-    return res;
+    else
+    {
+        if(stream && data.algo_freq.needsLock())
+        {
+            // critical section
+            while (data.used.exchange(true)) { }
+            
+            data.algo_freq.computeWhileLocked();
+            
+            // unlock
+            data.used = false;
+        }
+        
+        Result res = data.algo_freq.computeFrequency(value);
+        freq_result.storeResultForTime(res, value, guiTime);
+        return res;
+    }
 }
 
 /*
@@ -497,11 +486,13 @@ FreqFromAutocorr::~FreqFromAutocorr()
 
 Result FreqFromZC::computeFrequency(float & f)
 {
-    f = previousFreq;
-    return Result::OK;
+    f = resultFreq_;
+    return result_;
 }
 void FreqFromZC::computeWhileLocked()
 {
+    result_ = Result::PREVIOUS_VALUE;
+
     auto delta = signal_range.delta();
     signal_range.set(0.f, 0.f);
     
@@ -634,7 +625,10 @@ void FreqFromZC::computeWhileLocked()
                 //LG(INFO,"%.4f > %.4f : discarded", candidate, maxFreq);
             }
             else
-                previousFreq = candidate;
+            {
+                resultFreq_ = candidate;
+                result_ = Result::OK;
+            }
         }
     }
 }

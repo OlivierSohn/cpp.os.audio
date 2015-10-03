@@ -35,7 +35,12 @@ const int SAMPLE_RATE(44100);
 
 namespace imajuscule
 {
-    enum class Result { NOT_ENOUGH_DATA, NOT_ENOUGH_MEMORY, OK, PREVIOUS_VALUE };
+    enum class Result {
+        NOT_ENOUGH_DATA,
+        NOT_ENOUGH_MEMORY,
+        OK,
+        PREVIOUS_VALUE
+    };
 
     constexpr static const float minFreq = 80.f; // in herz (based on my voice :) )
     constexpr static const float maxFreq = 440.f; // in herz (also based on my voice :) )
@@ -190,7 +195,7 @@ namespace imajuscule
         
         void reset()
         {
-            // dont reset previousFreq !
+            // dont reset resultFreq_ !
 
             signal_range.set(0.f,0.f);
             positive_zeros_dist.reset();
@@ -244,8 +249,9 @@ namespace imajuscule
         int acc = 0;
         bool bWasNeg = true;
         
-        float previousFreq = 0.f;
+        float resultFreq_ = 0.f;
         range<float> signal_range; // range is representative of a single time step (except for very first calculation of a series)
+        Result result_ = Result::NOT_ENOUGH_DATA;
     };
     
     /*
@@ -347,7 +353,7 @@ namespace imajuscule
         static Audio & getInstance();
         void Init();
         void TearDown();
-        float getMaxAbs(float guiTime);
+        Result getMaxAbs(float guiTime, float & f);
         Result getFrequency(float guiTime, float & f);
         ~Audio();
     private:
@@ -365,21 +371,24 @@ namespace imajuscule
             {
                 return (computedOnce_ && timeComputation_ == t);
             }
-            float result() const
+            Result result(float & val) const
             {
                 A(computedOnce_);
-                return value_;
+                val = value_;
+                return res_;
             }
-            void storeResultForTime(float res, float t)
+            void storeResultForTime(Result r, float res, float t)
             {
                 computedOnce_ = true;
                 timeComputation_ = t;
                 value_ = res;
+                res_ = r;
             }
         private:
             bool computedOnce_ = false;
             float timeComputation_;
             float value_;
+            Result res_;
         } maxAbs_result, freq_result;
     };
 }
