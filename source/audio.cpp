@@ -110,7 +110,7 @@ void Audio::Init()
     const char * lat = "PA_MIN_LATENCY_MSEC";
     const char * latVal = "1";
     int erri = setenv( lat, latVal, true);
-    if(erri)
+    if(unlikely(erri))
     {
         LG(ERR, "Audio::get : Could not set env variable PA_MIN_LATENCY_MSEC: %d", errno);
         A(0);
@@ -139,7 +139,7 @@ void Audio::Init()
 
     LG(INFO, "Audio::Init : initializing %s", Pa_GetVersionText());
     PaError err = Pa_Initialize();
-    if(err == paNoError)
+    if(likely(err == paNoError))
     {
         LG(INFO, "Audio::Init : done initializing %s", Pa_GetVersionText());
         bInitialized_ = true;
@@ -165,7 +165,7 @@ void Audio::Init()
         
         PaStreamParameters inputParameters;
         inputParameters.device = Pa_GetDefaultInputDevice(); /* default input device */
-        if (inputParameters.device == paNoDevice) {
+        if (unlikely(inputParameters.device == paNoDevice)) {
             LG(ERR, "Audio::get : No default input device");
             A(0);
             return;
@@ -200,7 +200,7 @@ void Audio::Init()
                             paClipOff,      /* we won't output out of range samples so don't bother clipping them */
                             recordCallback,
                             &data);
-        if( err != paNoError )
+        if( unlikely(err != paNoError) )
         {
             stream = NULL;
             LG(ERR, "Pa_OpenStream failed : %s", Pa_GetErrorText(err));
@@ -215,7 +215,7 @@ void Audio::Init()
         LG(INFO, "stream : sample rate %f", si->sampleRate);
         
         err = Pa_StartStream( stream );
-        if( err != paNoError )
+        if( unlikely(err != paNoError) )
         {
             LG(ERR, "Pa_StartStream failed : %s", Pa_GetErrorText(err));
             A(0);
@@ -236,7 +236,7 @@ void Audio::TearDown()
         if(stream)
         {
             PaError err = Pa_CloseStream( stream );
-            if( err != paNoError ) {
+            if( unlikely(err != paNoError) ) {
                 LG(ERR, "Pa_CloseStream failed : %s", Pa_GetErrorText(err));
                 A(0);
             }

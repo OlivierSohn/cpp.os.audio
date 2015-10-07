@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		09610DE91BC4D77E0032A599 /* audio.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 09E7B1301BB5CA01007BAA5F /* audio.cpp */; };
 		09E7B1311BB5CA01007BAA5F /* audio.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 09E7B1301BB5CA01007BAA5F /* audio.cpp */; settings = {ASSET_TAGS = (); }; };
 		09E7B1341BB5CA29007BAA5F /* audio.h in Headers */ = {isa = PBXBuildFile; fileRef = 09E7B1331BB5CA29007BAA5F /* audio.h */; settings = {ASSET_TAGS = (); }; };
 /* End PBXBuildFile section */
@@ -179,6 +180,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				09610DE91BC4D77E0032A599 /* audio.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -229,7 +231,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				MTL_ENABLE_DEBUG_INFO = YES;
-				ONLY_ACTIVE_ARCH = YES;
+				ONLY_ACTIVE_ARCH = NO;
 				SDKROOT = macosx;
 				USER_HEADER_SEARCH_PATHS = /usr/local/include;
 			};
