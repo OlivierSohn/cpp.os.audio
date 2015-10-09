@@ -1,3 +1,7 @@
+#ifdef __APPLE__
+#include "TargetConditionals.h"
+#endif
+
 #include <stdlib.h> // pulls in declaration of malloc, free
 #include <string.h>
 #include <cerrno>
@@ -9,7 +13,10 @@
 #include "audio.h"
 // SDL does not have audio recording yet so I use portaudio
 //#include "SDL_audio.h"
+#if TARGET_OS_IOS
+#else
 #include "portaudio.h"
+#endif
 // fft method is not easy to implement, i prefered zero crossing instead but i leave it here just in case
 //#include "kiss_fftr.h"
 #include <cstdlib>
@@ -44,6 +51,8 @@ const int NUM_CHANNELS(1);
  ** It may be called at interrupt level on some machines so don't do anything
  ** that could mess up the system like calling malloc() or free().
  */
+#if TARGET_OS_IOS
+#else
 static int recordCallback( const void *inputBuffer, void *outputBuffer,
                           unsigned long framesPerBuffer,
                           const PaStreamCallbackTimeInfo* timeInfo,
@@ -61,6 +70,7 @@ static int recordCallback( const void *inputBuffer, void *outputBuffer,
     
     return paContinue;
 }
+#endif
 void paTestData::step(const SAMPLE *rptr, unsigned long framesPerBuffer)
 {
     bool bFalse( false );
@@ -100,6 +110,8 @@ Audio& Audio::getInstance()
 }
 void Audio::Init()
 {
+#if TARGET_OS_IOS
+#else
     if(bInitialized_)
     {
         LG(WARN, "Audio::Init already initialized");
@@ -228,9 +240,12 @@ void Audio::Init()
         LG(ERR, "Audio::Init : PA_Initialize failed : %s", Pa_GetErrorText(err));
         A(0);
     }
+#endif
 }
 void Audio::TearDown()
 {
+#if TARGET_OS_IOS
+#else
     if(bInitialized_)
     {
         if(stream)
@@ -254,6 +269,7 @@ void Audio::TearDown()
     {
         LG(ERR, "Audio::TearDown : was not initialized");
     }
+#endif
 }
 Result Audio::getMaxAbs(float guiTime, float &value)
 {
