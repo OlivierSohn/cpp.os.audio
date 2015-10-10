@@ -246,7 +246,7 @@ void Audio::TearDown()
 {
 #if TARGET_OS_IOS
 #else
-    if(bInitialized_)
+    if(likely(bInitialized_))
     {
         if(stream)
         {
@@ -260,7 +260,7 @@ void Audio::TearDown()
         bInitialized_ = false;
         
         PaError err = Pa_Terminate();
-        if(err != paNoError)
+        if(unlikely(err != paNoError))
         {
             LG(ERR, "PA_Terminate failed : %s", Pa_GetErrorText(err));
         }
