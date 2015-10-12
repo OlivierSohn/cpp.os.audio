@@ -36,6 +36,7 @@ int setenv(const char *name, const char *value, int overwrite)
 }
 #endif
 
+
 const int FRAMES_PER_BUFFER(16);
 const float NUM_SECONDS(0.001f);
 const int NUM_CHANNELS(1);
@@ -157,23 +158,6 @@ void Audio::Init()
         bInitialized_ = true;
         
         LG(INFO,"%d host apis", Pa_GetHostApiCount());
-        
-        /*
-        data.maxFrameIndex = (unsigned long) (NUM_SECONDS * SAMPLE_RATE); // Record for a few seconds.
-        data.numSamples = data.maxFrameIndex * NUM_CHANNELS;
-        
-        if(data.recordedSamples)
-            free (data.recordedSamples);
-        data.recordedSamples = (SAMPLE *) malloc( data.numSamples * sizeof(SAMPLE) );
-    
-        if( data.recordedSamples == NULL )
-        {
-            LG(ERR, "Audio::get : Could not allocate record array");
-            A(0);
-            return;
-        }
-        for( auto i=0; i<data.numSamples; i++ ) data.recordedSamples[i] = 0;
-        */
         
         PaStreamParameters inputParameters;
         inputParameters.device = Pa_GetDefaultInputDevice(); /* default input device */
