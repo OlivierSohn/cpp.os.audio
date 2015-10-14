@@ -27,7 +27,7 @@
 /* Begin PBXFileReference section */
 		09E7B11C1BB5C64E007BAA5F /* libos.audio.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libos.audio.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		09E7B1271BB5C729007BAA5F /* libos.audio.ios.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libos.audio.ios.a; sourceTree = BUILT_PRODUCTS_DIR; };
-		09E7B1301BB5CA01007BAA5F /* audio.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = audio.cpp; path = source/audio.cpp; sourceTree = "<group>"; };
+		09E7B1301BB5CA01007BAA5F /* audio.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = audio.cpp; path = source/audio.cpp; sourceTree = "<group>"; };
 		09E7B1331BB5CA29007BAA5F /* audio.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = audio.h; path = include/audio.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
