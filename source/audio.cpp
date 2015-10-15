@@ -57,21 +57,28 @@ const int NUM_CHANNELS(1);
  */
 #if TARGET_OS_IOS
 AudioUnit *audioUnit = NULL;
-float *convertedSampleBuffer = NULL;
-OSStatus renderCallback(void *userData, AudioUnitRenderActionFlags *actionFlags,
-                        const AudioTimeStamp *audioTimeStamp, UInt32 busNumber,
-                        UInt32 numFrames, AudioBufferList *buffers) {
-    OSStatus status = AudioUnitRender(*audioUnit, actionFlags, audioTimeStamp,
-                                      1, numFrames, buffers);
+std::vector<float> convertedSampleBuffer;
+OSStatus renderCallback(void                        *userData,
+                        AudioUnitRenderActionFlags  *actionFlags,
+                        const AudioTimeStamp        *audioTimeStamp,
+                        UInt32                      busNumber,
+                        UInt32                      numFrames,
+                        AudioBufferList             *buffers) {
+    
+    OSStatus status = AudioUnitRender(*audioUnit,
+                                      actionFlags,
+                                      audioTimeStamp,
+                                      1,
+                                      numFrames,
+                                      buffers);
     if(status != noErr) {
+        LG(ERR,"renderCallback (audio) : error %d", status);
+        A(0);
         return status;
     }
     
-    if(convertedSampleBuffer == NULL) {
-        // Lazy initialization of this buffer is necessary because we don't
-        // know the frame count until the first callback
-        convertedSampleBuffer = (float*)malloc(sizeof(float) * numFrames);
-    }
+    convertedSampleBuffer.reserve(numFrames);
+    float * buf = convertedSampleBuffer.data();
     
     SInt16 *inputFrames = (SInt16*)(buffers->mBuffers->mData);
     
@@ -80,25 +87,31 @@ OSStatus renderCallback(void *userData, AudioUnitRenderActionFlags *actionFlags,
     // on floating point, and this is especially true if you are porting a
     // VST/AU to iOS.
     for(int i = 0; i < numFrames; i++) {
-        convertedSampleBuffer[i] = (float)inputFrames[i] / 32768.f;
+        buf[i] = (float)inputFrames[i] / 32768.f;
     }
     
     paTestData *data = (paTestData*)userData;
     
-    data->step((const SAMPLE*)convertedSampleBuffer, numFrames);
+    data->step((const SAMPLE*)buf, numFrames);
 
     // Now we have floating point sample data from the render callback! We
     // can send it along for further processing, for example:
     // plugin->processReplacing(convertedSampleBuffer, NULL, sampleFrames);
     
+    
+    /*
     // Assuming that you have processed in place, we can now write the
     // floating point data back to the input buffer.
     for(int i = 0; i < numFrames; i++) {
         // Note that we multiply by 32767 here, NOT 32768. This is to avoid
         // overflow errors (and thus clipping).
         inputFrames[i] = (SInt16)(convertedSampleBuffer[i] * 32767.f);
-    }
-    
+    }*/
+
+    // mute audio
+    for (UInt32 i=0; i<buffers->mNumberBuffers; ++i)
+        memset(buffers->mBuffers[i].mData, 0, buffers->mBuffers[i].mDataByteSize);
+
     return noErr;
 }
 #else
@@ -177,7 +190,7 @@ int initAudioSession() {
         return 1;
     }
     
-    Float32 bufferSizeInSec = 0.02f;
+    Float32 bufferSizeInSec = 0.005f;
     if(AudioSessionSetProperty(kAudioSessionProperty_PreferredHardwareIOBufferDuration,
                                sizeof(Float32), &bufferSizeInSec) != noErr) {
         return 1;
@@ -198,17 +211,18 @@ int initAudioSession() {
 }
 
 int initAudioStreams(AudioUnit *audioUnit, void * pData) {
-    UInt32 audioCategory = kAudioSessionCategory_PlayAndRecord;
+    UInt32 audioCategory = //kAudioSessionCategory_RecordAudio;
+    kAudioSessionCategory_PlayAndRecord;
     if(AudioSessionSetProperty(kAudioSessionProperty_AudioCategory,
                                sizeof(UInt32), &audioCategory) != noErr) {
         return 1;
     }
-    
+    /*
     UInt32 overrideCategory = 1;
     if(AudioSessionSetProperty(kAudioSessionProperty_OverrideCategoryDefaultToSpeaker,
                                sizeof(UInt32), &overrideCategory) != noErr) {
         // Less serious error, but you may want to handle it and bail here
-    }
+    }*/
     
     AudioComponentDescription componentDescription;
     componentDescription.componentType = kAudioUnitType_Output;
