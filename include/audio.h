@@ -6,6 +6,7 @@
 #include "math.h"
 #include "cg.math.numeric.h"
 #include "cg.math.filter.h"
+#include "cg.math.sensors.h"
 
 #define DBG_SAMPLES 0
 
@@ -37,13 +38,6 @@ const int SAMPLE_RATE(44100);
 
 namespace imajuscule
 {
-    enum class Result {
-        NOT_ENOUGH_DATA,
-        NOT_ENOUGH_MEMORY,
-        OK,
-        PREVIOUS_VALUE
-    };
-
     constexpr static const float minFreq = 80.f; // in herz (based on my voice :) )
     constexpr static const float maxFreq = 440.f; // in herz (also based on my voice :) )
     // and we want to have at least 3 samplings per period of max frequency, so:
@@ -61,132 +55,6 @@ namespace imajuscule
 
     };
     
-    enum CyclicInitializationType
-    {
-        OVERWRITE_INITIAL_VALUES_WITH_FIRST_FEED,
-        KEEP_INITIAL_VALUES
-    };
-    
-    template<class T, int KIND = KEEP_INITIAL_VALUES>
-    struct cyclic
-    {
-        using container = typename std::vector<T>;
-        using iterator = typename container::iterator;
-        using const_iterator = typename container::const_iterator;
-        
-        operator container & () { return buf; }
-        operator container const& () const { return buf; }
-        
-        const_iterator begin() const { return buf.begin();}
-        iterator begin() { return buf.begin();}
-        const_iterator cycleEnd() const { return it;}
-        iterator cycleEnd() { return it;}
-        const_iterator end() const { return buf.end();}
-        iterator end() { return buf.end();}
-
-        size_t size() const { return buf.size(); }
-        
-        cyclic(size_t size, T initVals)
-        :initialValue(initVals)
-        {
-            buf.resize(size, initVals);
-            it = buf.begin();
-        }
-        void feed(T val)
-        {
-            *it = val;
-            ++it;
-            if(it == buf.end())
-                it = buf.begin();
-            
-            if(isFirstFeed)
-            {
-                if(KIND == OVERWRITE_INITIAL_VALUES_WITH_FIRST_FEED)
-                {
-                    std::fill(buf.begin(), buf.end(), val);
-                }
-                isFirstFeed = false;
-            }
-        }
-        void reset()
-        {
-            std::fill(buf.begin(), buf.end(), initialValue);
-            it = buf.begin();
-            isFirstFeed = true;
-        }
-    private:
-        container buf;
-        iterator it;
-        T initialValue;
-        bool isFirstFeed = true;
-    };
-    
-    struct slidingAverage
-    {
-        slidingAverage(size_t size) :
-        values_(size, 0.f)
-        {
-        }
-        float feed(float val)
-        {
-            values_.feed(val);
-            return get();
-        }
-        float get() const
-        {
-            return std::accumulate(values_.begin(), values_.end(), 0.f) / (float) values_.size();
-        }
-        void reset()
-        {
-            values_.reset();
-        }
-    private:
-        cyclic<float, OVERWRITE_INITIAL_VALUES_WITH_FIRST_FEED> values_;
-    };
-    template <class T>
-    struct range
-    {
-        range(){min_ = 10; max_ = -10;} // to force assert if not set afterwards
-        range(T min, T max):
-        min_(min)
-        , max_(max)
-        {
-            A(min <= max);
-        }
-        T delta() const
-        {
-            T res = max_ - min_;
-            return res;
-        }
-        void set(T min, T max)
-        {
-            A(min <= max);
-            min_ = min;
-            max_ = max;
-        }
-        bool extend(T val)
-        {
-            if(val > max_)
-            {
-                max_ = val;
-                return true;
-            }
-            else if(val < min_)
-            {
-                min_ = val;
-                return true;
-            }
-            return false;
-        }
-        bool contains(T val) const
-        {A(max_>=min_);
-            return (val <= max_ && val >= min_);
-        }
-        T getMax() const {return max_;}
-        T getMin() const {return min_;}
-    private:
-        T min_, max_;
-    };
     struct FreqFromZC : public FreqAlgo
     {
         // use constant epsilon instead of 0 to not record zero crossing related to noise
@@ -376,31 +244,6 @@ namespace imajuscule
         PaStream *stream = NULL;
         
         paTestData data;
-        
-        struct
-        {
-            bool hasResultForTime(float t) const
-            {
-                return (computedOnce_ && timeComputation_ == t);
-            }
-            Result result(float & val) const
-            {
-                A(computedOnce_);
-                val = value_;
-                return res_;
-            }
-            void storeResultForTime(Result r, float res, float t)
-            {
-                computedOnce_ = true;
-                timeComputation_ = t;
-                value_ = res;
-                res_ = r;
-            }
-        private:
-            bool computedOnce_ = false;
-            float timeComputation_;
-            float value_;
-            Result res_;
-        } maxAbs_result, freq_result;
+        TimedResult<float> maxAbs_result, freq_result;
     };
 }
