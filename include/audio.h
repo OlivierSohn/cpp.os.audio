@@ -4,7 +4,6 @@
 #include <numeric>
 #include <cmath>
 #include "os.log.h"
-#include "math.h"
 #include "cg.math.numeric.h"
 #include "cg.math.filter.h"
 #include "cg.math.sensors.h"
