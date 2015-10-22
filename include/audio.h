@@ -2,6 +2,7 @@
 #include <atomic>
 #include <algorithm>
 #include <numeric>
+#include <cmath>
 #include "os.log.h"
 #include "math.h"
 #include "cg.math.numeric.h"
@@ -45,18 +46,13 @@ namespace imajuscule
     constexpr static const float time_between_representative_samples = 1.f / (samples_per_max_freq_period * maxFreq);
     constexpr static const int sampling_period = (int)(((float)SAMPLE_RATE) * time_between_representative_samples + 0.5f);
 
-    struct FreqAlgo
-    {
-        virtual bool needsLock() = 0;
-        // if needsLock returns true, this is called in the main thread, while lock is taken
-        virtual void computeWhileLocked(){};
-        // called in the main thread, outside lock scope
-        virtual Result computeFrequency(float & f) = 0;
-
-    };
     
-    struct FreqFromZC : public FreqAlgo
+    struct FreqFromZC : public TimedCompute<FreqFromZC, NO_LOCK, float>
     {
+        friend class TimedCompute<FreqFromZC, NO_LOCK, float>;
+        
+        const char * name = "AUF";
+        
         // use constant epsilon instead of 0 to not record zero crossing related to noise
         const SAMPLE upperZero =
 #ifdef _WIN32
@@ -66,8 +62,7 @@ namespace imajuscule
 #endif
             ;
         
-        bool needsLock () override {return true;}
-        void computeWhileLocked() override;
+        bool computeWhileLocked();
         
         void reset()
         {
@@ -80,8 +75,9 @@ namespace imajuscule
             counter = sampling_period;
         }
         
-        FreqFromZC()
-        : positive_zeros_dist(16, 0)
+        FreqFromZC(std::atomic_bool &a)
+        : TimedCompute<FreqFromZC, NO_LOCK, float>(&a)
+        , positive_zeros_dist(16, 0)
         , signal_range(0.f,0.f)
         {
             filter_.initWithSampleRate(((float)SAMPLE_RATE)/(float)sampling_period, 50, false);
@@ -115,7 +111,7 @@ namespace imajuscule
             acc++;
         }
         
-        Result computeFrequency(float & f) override;
+        bool compute(float & f);
         
     private:
         int counter = sampling_period;
@@ -127,7 +123,6 @@ namespace imajuscule
         
         float resultFreq_ = 0.f;
         range<float> signal_range; // range is representative of a single time step (except for very first calculation of a series)
-        Result result_ = Result::NOT_ENOUGH_DATA;
     };
     
     /*
@@ -203,12 +198,39 @@ namespace imajuscule
     };
     */
     
+    struct AlgoMax : public TimedCompute<AlgoMax, NO_LOCK, float>
+    {
+        friend class TimedCompute<AlgoMax, NO_LOCK, float>;
+        
+        const char * name = "AU";
+        
+        AlgoMax(std::atomic_bool &a)
+        : TimedCompute<AlgoMax, NO_LOCK, float>(&a)
+        {}
+        bool computeWhileLocked();
+        
+        void feed(SAMPLE val)
+        {
+            val = std::abs(val);
+            maxAbsSinceLastRead = std::max(maxAbsSinceLastRead, val);
+        }
+        
+        bool compute(float & f);
+        
+    private:
+        SAMPLE maxAbsSinceLastRead = 0.f;
+        SAMPLE copy;
+    };
+    
+
     struct paTestData
     {
         const size_t sizeSlidingAverage = 160;
         
         paTestData()
-        : avg(sizeSlidingAverage)
+        : algo_freq(used)
+        , algo_max(used)
+        , avg(sizeSlidingAverage)
         {}
         
         void step(const SAMPLE * inputBuffer, unsigned long framesPerBuffer);
@@ -217,7 +239,8 @@ namespace imajuscule
         //FreqFromAutocorr
         FreqFromZC
             algo_freq;
-        SAMPLE maxAbsSinceLastRead = 0.f;
+        
+        AlgoMax algo_max;
 #if DBG_SAMPLES
         unsigned int samplesSinceLastRead = 0;
 #endif
@@ -233,8 +256,8 @@ namespace imajuscule
         static Audio & getInstance();
         void Init();
         void TearDown();
-        Result getMaxAbs(float guiTime, float & f);
-        Result getFrequency(float guiTime, float & f);
+        float getMaxAbs();
+        float getFrequency();
         ~Audio();
     private:
         Audio() {};
@@ -244,6 +267,5 @@ namespace imajuscule
         PaStream *stream = NULL;
         
         paTestData data;
-        TimedResult<float> maxAbs_result, freq_result;
     };
 }

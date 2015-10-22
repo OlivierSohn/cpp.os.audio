@@ -141,16 +141,16 @@ void paTestData::step(const SAMPLE *rptr, unsigned long framesPerBuffer)
                                      std::memory_order_relaxed))
     {}
     
-    // The lock succeeded
     if(rptr)
     {
 #if DBG_SAMPLES
         samplesSinceLastRead += framesPerBuffer;
 #endif
+
         for( unsigned long i=0; i<framesPerBuffer; i++ )
         {
             auto val = *rptr++;
-            maxAbsSinceLastRead = std::max(maxAbsSinceLastRead, std::abs(val));
+            algo_max.feed(val);
             
             // filter high frequencies
             auto filtered_value = avg.feed(val);
@@ -499,62 +499,25 @@ void Audio::TearDown()
         LG(ERR, "Audio::TearDown : was not initialized");
     }
 }
-Result Audio::getMaxAbs(float guiTime, float &value)
+bool AlgoMax::computeWhileLocked()
 {
-    if(maxAbs_result.hasResultForTime(guiTime))
-        return maxAbs_result.result(value);
-    else
-    {
-        Result res = Result::OK;
-        
-        // critical section
-        while (data.used.exchange(true)) { }
-        
-        // NOTE we could make maxAbsSinceLastRead atomic instead and not use data.used at all, to be more efficient
-        float val = data.maxAbsSinceLastRead;
-        data.maxAbsSinceLastRead = 0.f;
-
-#if DBG_SAMPLES
-        unsigned int sam = data.samplesSinceLastRead;
-        data.samplesSinceLastRead = 0;
-#endif
-
-        // unlock
-        data.used = false;
-
-#if DBG_SAMPLES
-        LG(INFO, "samples # %d", sam);
-#endif
-        value = val;
-        maxAbs_result.storeResultForTime(res, value, guiTime);
-
-        return res;
-    }
+    copy = maxAbsSinceLastRead;
+    maxAbsSinceLastRead = 0.f;
+    return true;
+}
+bool AlgoMax::compute(float &f)
+{
+    f = copy;
+    return true;
+}
+float Audio::getMaxAbs()
+{
+    return data.algo_max.getResult();
 }
 
-Result Audio::getFrequency(float guiTime, float &value)
+float Audio::getFrequency()
 {
-    if(freq_result.hasResultForTime(guiTime))
-    {
-        return freq_result.result(value);
-    }
-    else
-    {
-        if(data.algo_freq.needsLock())
-        {
-            // critical section
-            while (data.used.exchange(true)) { }
-            
-            data.algo_freq.computeWhileLocked();
-            
-            // unlock
-            data.used = false;
-        }
-        
-        Result res = data.algo_freq.computeFrequency(value);
-        freq_result.storeResultForTime(res, value, guiTime);
-        return res;
-    }
+    return data.algo_freq.getResult();
 }
 
 /*
@@ -743,15 +706,13 @@ FreqFromAutocorr::~FreqFromAutocorr()
         free( cfg2 );
 }*/
 
-Result FreqFromZC::computeFrequency(float & f)
+bool FreqFromZC::compute(float & f)
 {
     f = resultFreq_;
-    return result_;
+    return true;
 }
-void FreqFromZC::computeWhileLocked()
+bool FreqFromZC::computeWhileLocked()
 {
-    result_ = Result::PREVIOUS_VALUE;
-
     auto delta = signal_range.delta();
     signal_range.set(0.f, 0.f);
     
@@ -886,8 +847,10 @@ void FreqFromZC::computeWhileLocked()
             else
             {
                 resultFreq_ = candidate;
-                result_ = Result::OK;
+                return true;
             }
         }
     }
+    
+    return false;
 }
