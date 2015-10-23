@@ -323,6 +323,9 @@ void Audio::Init()
         LG(WARN, "Audio::Init already initialized");
         return;
     }
+    
+    data.algo_max.Register();
+    data.algo_freq.Register();
 
 #if TARGET_OS_IOS
     if(0==initAudioSession())
@@ -457,7 +460,6 @@ void Audio::Init()
     }
     else
     {
-        bInitialized_ = false;
         LG(ERR, "Audio::Init : PA_Initialize failed : %s", Pa_GetErrorText(err));
         A(0);
     }
@@ -491,7 +493,10 @@ void Audio::TearDown()
             LG(ERR, "PA_Terminate failed : %s", Pa_GetErrorText(err));
         }
 #endif
-           
+        
+        data.algo_freq.Unregister();
+        data.algo_max.Unregister();
+        
         bInitialized_ = false;
     }
     else

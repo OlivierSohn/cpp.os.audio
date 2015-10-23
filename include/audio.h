@@ -240,6 +240,7 @@ namespace imajuscule
             algo_freq;
         
         AlgoMax algo_max;
+        
 #if DBG_SAMPLES
         unsigned int samplesSinceLastRead = 0;
 #endif
