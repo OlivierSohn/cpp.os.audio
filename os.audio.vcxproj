@@ -19,12 +19,12 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\audio.h" />
+    <ClInclude Include="include\os.audio.h" />
     <ClInclude Include="source\win32\stdafx.h" />
     <ClInclude Include="source\win32\targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="source\audio.cpp" />
+    <ClCompile Include="source\os.audio.cpp" />
     <ClCompile Include="source\win32\stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>

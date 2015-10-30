@@ -15,13 +15,13 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\audio.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="source\win32\stdafx.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="source\win32\targetver.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\os.audio.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -29,7 +29,7 @@
     <ClCompile Include="source\win32\stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\audio.cpp">
+    <ClCompile Include="source\os.audio.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
