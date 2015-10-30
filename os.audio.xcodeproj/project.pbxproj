@@ -7,9 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		09610DE91BC4D77E0032A599 /* audio.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 09E7B1301BB5CA01007BAA5F /* audio.cpp */; };
-		09E7B1311BB5CA01007BAA5F /* audio.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 09E7B1301BB5CA01007BAA5F /* audio.cpp */; settings = {ASSET_TAGS = (); }; };
-		09E7B1341BB5CA29007BAA5F /* audio.h in Headers */ = {isa = PBXBuildFile; fileRef = 09E7B1331BB5CA29007BAA5F /* audio.h */; settings = {ASSET_TAGS = (); }; };
+		09610DE91BC4D77E0032A599 /* os.audio.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 09E7B1301BB5CA01007BAA5F /* os.audio.cpp */; };
+		09E7B1311BB5CA01007BAA5F /* os.audio.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 09E7B1301BB5CA01007BAA5F /* os.audio.cpp */; };
+		09E7B1341BB5CA29007BAA5F /* os.audio.h in Headers */ = {isa = PBXBuildFile; fileRef = 09E7B1331BB5CA29007BAA5F /* os.audio.h */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -27,8 +27,8 @@
 /* Begin PBXFileReference section */
 		09E7B11C1BB5C64E007BAA5F /* libos.audio.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libos.audio.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		09E7B1271BB5C729007BAA5F /* libos.audio.ios.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libos.audio.ios.a; sourceTree = BUILT_PRODUCTS_DIR; };
-		09E7B1301BB5CA01007BAA5F /* audio.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = audio.cpp; path = source/audio.cpp; sourceTree = "<group>"; };
-		09E7B1331BB5CA29007BAA5F /* audio.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = audio.h; path = include/audio.h; sourceTree = "<group>"; };
+		09E7B1301BB5CA01007BAA5F /* os.audio.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = os.audio.cpp; path = source/os.audio.cpp; sourceTree = "<group>"; };
+		09E7B1331BB5CA29007BAA5F /* os.audio.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = os.audio.h; path = include/os.audio.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -70,7 +70,7 @@
 		09E7B1321BB5CA0E007BAA5F /* source */ = {
 			isa = PBXGroup;
 			children = (
-				09E7B1301BB5CA01007BAA5F /* audio.cpp */,
+				09E7B1301BB5CA01007BAA5F /* os.audio.cpp */,
 			);
 			name = source;
 			sourceTree = "<group>";
@@ -78,7 +78,7 @@
 		09E7B1351BB5CA30007BAA5F /* include */ = {
 			isa = PBXGroup;
 			children = (
-				09E7B1331BB5CA29007BAA5F /* audio.h */,
+				09E7B1331BB5CA29007BAA5F /* os.audio.h */,
 			);
 			name = include;
 			sourceTree = "<group>";
@@ -90,7 +90,7 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				09E7B1341BB5CA29007BAA5F /* audio.h in Headers */,
+				09E7B1341BB5CA29007BAA5F /* os.audio.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -172,7 +172,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				09E7B1311BB5CA01007BAA5F /* audio.cpp in Sources */,
+				09E7B1311BB5CA01007BAA5F /* os.audio.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -180,7 +180,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				09610DE91BC4D77E0032A599 /* audio.cpp in Sources */,
+				09610DE91BC4D77E0032A599 /* os.audio.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

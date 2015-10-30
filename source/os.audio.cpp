@@ -10,7 +10,7 @@
 #include <cmath>
 #include <map>
 
-#include "audio.h"
+#include "os.audio.h"
 
 #if TARGET_OS_IOS
 #import <AudioToolbox/AudioToolbox.h>
