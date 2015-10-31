@@ -504,15 +504,14 @@ void Audio::TearDown()
         LG(ERR, "Audio::TearDown : was not initialized");
     }
 }
-bool AlgoMax::computeWhileLocked()
+bool AlgoMax::computeWhileLocked(float &f)
 {
-    copy = maxAbsSinceLastRead;
+    f = maxAbsSinceLastRead;
     maxAbsSinceLastRead = 0.f;
     return true;
 }
 bool AlgoMax::compute(float &f)
 {
-    f = copy;
     return true;
 }
 float Audio::getMaxAbs()
@@ -713,10 +712,9 @@ FreqFromAutocorr::~FreqFromAutocorr()
 
 bool FreqFromZC::compute(float & f)
 {
-    f = resultFreq_;
     return true;
 }
-bool FreqFromZC::computeWhileLocked()
+bool FreqFromZC::computeWhileLocked(float & f)
 {
     auto delta = signal_range.delta();
     signal_range.set(0.f, 0.f);
@@ -851,7 +849,7 @@ bool FreqFromZC::computeWhileLocked()
             }
             else
             {
-                resultFreq_ = candidate;
+                f = candidate;
                 return true;
             }
         }

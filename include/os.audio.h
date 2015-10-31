@@ -61,7 +61,7 @@ namespace imajuscule
 #endif
             ;
         
-        bool computeWhileLocked();
+        bool computeWhileLocked(float & f);
         
         void reset()
         {
@@ -120,7 +120,6 @@ namespace imajuscule
         int acc = 0;
         bool bWasNeg = true;
         
-        float resultFreq_ = 0.f;
         range<float> signal_range; // range is representative of a single time step (except for very first calculation of a series)
     };
     
@@ -206,7 +205,7 @@ namespace imajuscule
         AlgoMax(std::atomic_bool &a)
         : TimedCompute<AlgoMax, NO_LOCK, float>(&a)
         {}
-        bool computeWhileLocked();
+        bool computeWhileLocked(float & f);
         
         void feed(SAMPLE val)
         {
@@ -218,7 +217,6 @@ namespace imajuscule
         
     private:
         SAMPLE maxAbsSinceLastRead = 0.f;
-        SAMPLE copy;
     };
     
 
