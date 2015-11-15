@@ -209,7 +209,7 @@ int initAudioSession() {
     return 0;
 }
 
-int initAudioStreams(AudioUnit audioUnit, void * pData) {
+int initAudioStreams(AudioUnit & audioUnit, void * pData) {
     UInt32 audioCategory = //kAudioSessionCategory_RecordAudio;
     kAudioSessionCategory_PlayAndRecord;
     if(AudioSessionSetProperty(kAudioSessionProperty_AudioCategory,
@@ -230,7 +230,7 @@ int initAudioStreams(AudioUnit audioUnit, void * pData) {
     componentDescription.componentFlags = 0;
     componentDescription.componentFlagsMask = 0;
     AudioComponent component = AudioComponentFindNext(NULL, &componentDescription);
-    if(AudioComponentInstanceNew(component, audioUnit) != noErr) {
+    if(AudioComponentInstanceNew(component, &audioUnit) != noErr) {
         return 1;
     }
     
