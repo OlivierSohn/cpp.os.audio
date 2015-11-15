@@ -56,7 +56,7 @@ const int NUM_CHANNELS(1);
  ** that could mess up the system like calling malloc() or free().
  */
 #if TARGET_OS_IOS
-AudioUnit *audioUnit = NULL;
+AudioUnit audioUnit = NULL;
 std::vector<float> convertedSampleBuffer;
 OSStatus renderCallback(void                        *userData,
                         AudioUnitRenderActionFlags  *actionFlags,
@@ -65,7 +65,7 @@ OSStatus renderCallback(void                        *userData,
                         UInt32                      numFrames,
                         AudioBufferList             *buffers) {
     
-    OSStatus status = AudioUnitRender(*audioUnit,
+    OSStatus status = AudioUnitRender(audioUnit,
                                       actionFlags,
                                       audioTimeStamp,
                                       1,
@@ -174,7 +174,6 @@ Audio& Audio::getInstance()
 
 #if TARGET_OS_IOS
 int initAudioSession() {
-    audioUnit = (AudioUnit*)malloc(sizeof(AudioUnit));
     
     if(AudioSessionInitialize(NULL, NULL, NULL, NULL) != noErr) {
         return 1;
@@ -210,7 +209,7 @@ int initAudioSession() {
     return 0;
 }
 
-int initAudioStreams(AudioUnit *audioUnit, void * pData) {
+int initAudioStreams(AudioUnit audioUnit, void * pData) {
     UInt32 audioCategory = //kAudioSessionCategory_RecordAudio;
     kAudioSessionCategory_PlayAndRecord;
     if(AudioSessionSetProperty(kAudioSessionProperty_AudioCategory,
@@ -236,7 +235,7 @@ int initAudioStreams(AudioUnit *audioUnit, void * pData) {
     }
     
     UInt32 enable = 1;
-    if(AudioUnitSetProperty(*audioUnit, kAudioOutputUnitProperty_EnableIO,
+    if(AudioUnitSetProperty(audioUnit, kAudioOutputUnitProperty_EnableIO,
                             kAudioUnitScope_Input, 1, &enable, sizeof(UInt32)) != noErr) {
         return 1;
     }
@@ -244,7 +243,7 @@ int initAudioStreams(AudioUnit *audioUnit, void * pData) {
     AURenderCallbackStruct callbackStruct;
     callbackStruct.inputProc = renderCallback; // Render function
     callbackStruct.inputProcRefCon = pData;
-    if(AudioUnitSetProperty(*audioUnit, kAudioUnitProperty_SetRenderCallback,
+    if(AudioUnitSetProperty(audioUnit, kAudioUnitProperty_SetRenderCallback,
                             kAudioUnitScope_Input, 0, &callbackStruct,
                             sizeof(AURenderCallbackStruct)) != noErr) {
         return 1;
@@ -276,13 +275,13 @@ int initAudioStreams(AudioUnit *audioUnit, void * pData) {
     streamDescription.mReserved = 0;
     
     // Set up input stream with above properties
-    if(AudioUnitSetProperty(*audioUnit, kAudioUnitProperty_StreamFormat,
+    if(AudioUnitSetProperty(audioUnit, kAudioUnitProperty_StreamFormat,
                             kAudioUnitScope_Input, 0, &streamDescription, sizeof(streamDescription)) != noErr) {
         return 1;
     }
     
     // Ditto for the output stream, which we will be sending the processed audio to
-    if(AudioUnitSetProperty(*audioUnit, kAudioUnitProperty_StreamFormat,
+    if(AudioUnitSetProperty(audioUnit, kAudioUnitProperty_StreamFormat,
                             kAudioUnitScope_Output, 1, &streamDescription, sizeof(streamDescription)) != noErr) {
         return 1;
     }
@@ -290,28 +289,28 @@ int initAudioStreams(AudioUnit *audioUnit, void * pData) {
     return 0;
 }
 
-int startAudioUnit(AudioUnit *audioUnit) {
-    if(AudioUnitInitialize(*audioUnit) != noErr) {
+int startAudioUnit(AudioUnit audioUnit) {
+    if(AudioUnitInitialize(audioUnit) != noErr) {
         return 1;
     }
     
-    if(AudioOutputUnitStart(*audioUnit) != noErr) {
+    if(AudioOutputUnitStart(audioUnit) != noErr) {
         return 1;
     }
     
     return 0;
 }
 
-int stopProcessingAudio(AudioUnit *audioUnit) {
-    if(AudioOutputUnitStop(*audioUnit) != noErr) {
+int stopProcessingAudio(AudioUnit audioUnit) {
+    if(AudioOutputUnitStop(audioUnit) != noErr) {
         return 1;
     }
     
-    if(AudioUnitUninitialize(*audioUnit) != noErr) {
+    if(AudioUnitUninitialize(audioUnit) != noErr) {
         return 1;
     }
     
-    *audioUnit = NULL;
+    audioUnit = NULL;
     return 0;
 }
 
