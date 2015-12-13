@@ -77,7 +77,7 @@ OSStatus renderCallback(void                        *userData,
         return status;
     }
     
-    convertedSampleBuffer.reserve(numFrames);
+    convertedSampleBuffer.resize(numFrames);
     float * buf = convertedSampleBuffer.data();
     
     SInt16 *inputFrames = (SInt16*)(buffers->mBuffers->mData);
