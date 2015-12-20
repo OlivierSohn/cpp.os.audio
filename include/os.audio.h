@@ -50,8 +50,8 @@ namespace imajuscule
     {
         friend class TimedCompute<FreqFromZC, NO_LOCK, float>;
         
-        const char * name = "AUF";
-        
+        std::string const & getVarName() { return name; }
+
         // use constant epsilon instead of 0 to not record zero crossing related to noise
         const SAMPLE upperZero =
 #ifdef _WIN32
@@ -121,6 +121,8 @@ namespace imajuscule
         bool bWasNeg = true;
         
         range<float> signal_range; // range is representative of a single time step (except for very first calculation of a series)
+
+        std::string name = std::string("AUF");
     };
     
     /*
@@ -200,7 +202,7 @@ namespace imajuscule
     {
         friend class TimedCompute<AlgoMax, NO_LOCK, float>;
         
-        const char * name = "AU";
+        std::string const & getVarName() { return name; }
         
         AlgoMax(std::atomic_bool &a)
         : TimedCompute<AlgoMax, NO_LOCK, float>(&a)
@@ -217,6 +219,7 @@ namespace imajuscule
         
     private:
         SAMPLE maxAbsSinceLastRead = 0.f;
+        std::string name = std::string("AU");
     };
     
 
