@@ -25,12 +25,12 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		09C84A441C271D95002CF5B7 /* os.audio.Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = os.audio.Debug.xcconfig; sourceTree = "<group>"; };
-		09C84A451C271D95002CF5B7 /* os.audio.ios.Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = os.audio.ios.Debug.xcconfig; sourceTree = "<group>"; };
-		09C84A461C271D95002CF5B7 /* os.audio.ios.Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = os.audio.ios.Release.xcconfig; sourceTree = "<group>"; };
-		09C84A471C271D95002CF5B7 /* os.audio.ios.Shared.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = os.audio.ios.Shared.xcconfig; sourceTree = "<group>"; };
-		09C84A481C271D95002CF5B7 /* os.audio.Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = os.audio.Release.xcconfig; sourceTree = "<group>"; };
-		09C84A491C271D95002CF5B7 /* os.audio.Shared.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = os.audio.Shared.xcconfig; sourceTree = "<group>"; };
+		09C84A441C271D95002CF5B7 /* osx.debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = osx.debug.xcconfig; sourceTree = "<group>"; };
+		09C84A451C271D95002CF5B7 /* ios.debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = ios.debug.xcconfig; sourceTree = "<group>"; };
+		09C84A461C271D95002CF5B7 /* ios.release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = ios.release.xcconfig; sourceTree = "<group>"; };
+		09C84A471C271D95002CF5B7 /* ios.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = ios.xcconfig; sourceTree = "<group>"; };
+		09C84A481C271D95002CF5B7 /* osx.release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = osx.release.xcconfig; sourceTree = "<group>"; };
+		09C84A491C271D95002CF5B7 /* osx.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = osx.xcconfig; sourceTree = "<group>"; };
 		09C84A4A1C271D95002CF5B7 /* Project.Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Project.Debug.xcconfig; sourceTree = "<group>"; };
 		09C84A4B1C271D95002CF5B7 /* Project.Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Project.Release.xcconfig; sourceTree = "<group>"; };
 		09C84A4C1C271D95002CF5B7 /* Project.Shared.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Project.Shared.xcconfig; sourceTree = "<group>"; };
@@ -61,12 +61,12 @@
 		09C84A431C271D95002CF5B7 /* xcode.config */ = {
 			isa = PBXGroup;
 			children = (
-				09C84A441C271D95002CF5B7 /* os.audio.Debug.xcconfig */,
-				09C84A451C271D95002CF5B7 /* os.audio.ios.Debug.xcconfig */,
-				09C84A461C271D95002CF5B7 /* os.audio.ios.Release.xcconfig */,
-				09C84A471C271D95002CF5B7 /* os.audio.ios.Shared.xcconfig */,
-				09C84A481C271D95002CF5B7 /* os.audio.Release.xcconfig */,
-				09C84A491C271D95002CF5B7 /* os.audio.Shared.xcconfig */,
+				09C84A451C271D95002CF5B7 /* ios.debug.xcconfig */,
+				09C84A461C271D95002CF5B7 /* ios.release.xcconfig */,
+				09C84A471C271D95002CF5B7 /* ios.xcconfig */,
+				09C84A441C271D95002CF5B7 /* osx.debug.xcconfig */,
+				09C84A481C271D95002CF5B7 /* osx.release.xcconfig */,
+				09C84A491C271D95002CF5B7 /* osx.xcconfig */,
 				09C84A4A1C271D95002CF5B7 /* Project.Debug.xcconfig */,
 				09C84A4B1C271D95002CF5B7 /* Project.Release.xcconfig */,
 				09C84A4C1C271D95002CF5B7 /* Project.Shared.xcconfig */,
@@ -229,28 +229,28 @@
 		};
 		09E7B1211BB5C64E007BAA5F /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 09C84A441C271D95002CF5B7 /* os.audio.Debug.xcconfig */;
+			baseConfigurationReference = 09C84A441C271D95002CF5B7 /* osx.debug.xcconfig */;
 			buildSettings = {
 			};
 			name = Debug;
 		};
 		09E7B1221BB5C64E007BAA5F /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 09C84A481C271D95002CF5B7 /* os.audio.Release.xcconfig */;
+			baseConfigurationReference = 09C84A481C271D95002CF5B7 /* osx.release.xcconfig */;
 			buildSettings = {
 			};
 			name = Release;
 		};
 		09E7B12E1BB5C729007BAA5F /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 09C84A451C271D95002CF5B7 /* os.audio.ios.Debug.xcconfig */;
+			baseConfigurationReference = 09C84A451C271D95002CF5B7 /* ios.debug.xcconfig */;
 			buildSettings = {
 			};
 			name = Debug;
 		};
 		09E7B12F1BB5C729007BAA5F /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 09C84A461C271D95002CF5B7 /* os.audio.ios.Release.xcconfig */;
+			baseConfigurationReference = 09C84A461C271D95002CF5B7 /* ios.release.xcconfig */;
 			buildSettings = {
 			};
 			name = Release;
