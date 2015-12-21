@@ -40,8 +40,6 @@ int setenv(const char *name, const char *value, int overwrite)
 #endif
 
 
-const int FRAMES_PER_BUFFER(16);
-const float NUM_SECONDS(0.001f);
 const int NUM_CHANNELS(1);
 
 #define DITHER_FLAG     (0)
@@ -86,7 +84,7 @@ OSStatus renderCallback(void                        *userData,
     // floats here, as it just wastes CPU. However, most DSP algorithms rely
     // on floating point, and this is especially true if you are porting a
     // VST/AU to iOS.
-    for(int i = 0; i < numFrames; i++) {
+    for(auto i = 0; i < numFrames; i++) {
         buf[i] = (float)inputFrames[i] / 32768.f;
     }
     
