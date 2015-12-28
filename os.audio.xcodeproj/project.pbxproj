@@ -34,7 +34,7 @@
 		09C84A4A1C271D95002CF5B7 /* Project.Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Project.Debug.xcconfig; sourceTree = "<group>"; };
 		09C84A4B1C271D95002CF5B7 /* Project.Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Project.Release.xcconfig; sourceTree = "<group>"; };
 		09C84A4C1C271D95002CF5B7 /* Project.Shared.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Project.Shared.xcconfig; sourceTree = "<group>"; };
-		09E7B11C1BB5C64E007BAA5F /* libos.audio.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libos.audio.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		09E7B11C1BB5C64E007BAA5F /* libos.audio.osx.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libos.audio.osx.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		09E7B1271BB5C729007BAA5F /* libos.audio.ios.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libos.audio.ios.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		09E7B1301BB5CA01007BAA5F /* os.audio.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = os.audio.cpp; path = source/os.audio.cpp; sourceTree = "<group>"; };
 		09E7B1331BB5CA29007BAA5F /* os.audio.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = os.audio.h; path = include/os.audio.h; sourceTree = "<group>"; };
@@ -87,7 +87,7 @@
 		09E7B11D1BB5C64E007BAA5F /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				09E7B11C1BB5C64E007BAA5F /* libos.audio.a */,
+				09E7B11C1BB5C64E007BAA5F /* libos.audio.osx.a */,
 				09E7B1271BB5C729007BAA5F /* libos.audio.ios.a */,
 			);
 			name = Products;
@@ -123,9 +123,9 @@
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
-		09E7B11B1BB5C64E007BAA5F /* os.audio */ = {
+		09E7B11B1BB5C64E007BAA5F /* os.audio.osx */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 09E7B1201BB5C64E007BAA5F /* Build configuration list for PBXNativeTarget "os.audio" */;
+			buildConfigurationList = 09E7B1201BB5C64E007BAA5F /* Build configuration list for PBXNativeTarget "os.audio.osx" */;
 			buildPhases = (
 				09E7B1181BB5C64E007BAA5F /* Sources */,
 				09E7B1191BB5C64E007BAA5F /* Frameworks */,
@@ -135,9 +135,9 @@
 			);
 			dependencies = (
 			);
-			name = os.audio;
+			name = os.audio.osx;
 			productName = os.audio;
-			productReference = 09E7B11C1BB5C64E007BAA5F /* libos.audio.a */;
+			productReference = 09E7B11C1BB5C64E007BAA5F /* libos.audio.osx.a */;
 			productType = "com.apple.product-type.library.static";
 		};
 		09E7B1261BB5C729007BAA5F /* os.audio.ios */ = {
@@ -187,7 +187,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				09E7B11B1BB5C64E007BAA5F /* os.audio */,
+				09E7B11B1BB5C64E007BAA5F /* os.audio.osx */,
 				09E7B1261BB5C729007BAA5F /* os.audio.ios */,
 			);
 		};
@@ -267,7 +267,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		09E7B1201BB5C64E007BAA5F /* Build configuration list for PBXNativeTarget "os.audio" */ = {
+		09E7B1201BB5C64E007BAA5F /* Build configuration list for PBXNativeTarget "os.audio.osx" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				09E7B1211BB5C64E007BAA5F /* Debug */,
