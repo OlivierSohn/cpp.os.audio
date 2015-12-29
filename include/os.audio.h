@@ -61,7 +61,7 @@ namespace imajuscule
 #endif
             ;
         
-        bool computeWhileLocked(float & f);
+        InternalResult computeWhileLocked(float & f);
         
         void reset()
         {
@@ -110,7 +110,7 @@ namespace imajuscule
             acc++;
         }
         
-        bool compute(float & f);
+        InternalResult compute(float & f);
         
     private:
         int counter = sampling_period;
@@ -207,7 +207,7 @@ namespace imajuscule
         AlgoMax(std::atomic_bool &a)
         : TimedCompute<AlgoMax, NO_LOCK, float>(&a)
         {}
-        bool computeWhileLocked(float & f);
+        InternalResult computeWhileLocked(float & f);
         
         void feed(SAMPLE val)
         {
@@ -215,7 +215,7 @@ namespace imajuscule
             maxAbsSinceLastRead = std::max(maxAbsSinceLastRead, val);
         }
         
-        bool compute(float & f);
+        InternalResult compute(float & f);
         
     private:
         SAMPLE maxAbsSinceLastRead = 0.f;
