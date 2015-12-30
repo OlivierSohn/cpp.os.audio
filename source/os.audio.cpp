@@ -529,7 +529,7 @@ void FreqFromAutocorr::computeWhileLocked()
     processing.swap(willProcess);
 }*/
 
-void plot(const char*title,const std::vector<SAMPLE>&v)
+static void plot(const char*title,const std::vector<SAMPLE>&v)
 {
     return;
     LG(INFO,"%s", title);
@@ -834,7 +834,7 @@ InternalResult FreqFromZC::computeWhileLocked(float & f)
         // enable result if:
         // all periods were reconstructed from zero-crossing intervals
         // or the signal is loud enough to not be considered noise
-        if(data.count == positive_zeros_dist.size() || delta > upperZero )
+        if(data.count == (int)positive_zeros_dist.size() || delta > upperZero )
         {
             auto candidate = ((float)data.count) / ((float)data.total);
             candidate *= ((float)SAMPLE_RATE)/(float)sampling_period;
