@@ -1,8 +1,7 @@
 #pragma once
+
 #include <atomic>
-#include <algorithm>
-#include <numeric>
-#include <cmath>
+
 #include "os.log.h"
 #include "cg.math.numeric.h"
 #include "cg.math.filter.h"
@@ -31,8 +30,6 @@ typedef char SAMPLE;
 #define SAMPLE_SILENCE  (128)
 #define PRINTF_S_FORMAT "%d"
 #endif
-
-#include <vector>
 
 const int SAMPLE_RATE(44100);
 
