@@ -3,7 +3,8 @@
 #include <atomic>
 
 #include "os.log.h"
-#include "cg.math.numeric.h"
+
+#include "range.h"
 #include "cg.math.filter.h"
 #include "cg.math.sensors.h"
 
