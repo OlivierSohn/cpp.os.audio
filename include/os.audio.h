@@ -5,6 +5,8 @@
 #include "os.log.h"
 
 #include "range.h"
+#include "cyclic.h"
+#include "slidingaverage.h"
 #include "cg.math.filter.h"
 #include "cg.math.sensors.h"
 
