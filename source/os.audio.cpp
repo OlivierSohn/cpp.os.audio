@@ -512,15 +512,6 @@ InternalResult AlgoMax::compute(float &f)
     A(0);
     return InternalResult::COMPLETE_ERROR;
 }
-float Audio::getMaxAbs()
-{
-    return data.algo_max.getResult();
-}
-
-float Audio::getFrequency()
-{
-    return data.algo_freq.getResult();
-}
 
 /*
 void FreqFromAutocorr::computeWhileLocked()

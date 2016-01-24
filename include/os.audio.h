@@ -257,8 +257,6 @@ namespace imajuscule
         static Audio & getInstance();
         void Init();
         void TearDown();
-        float getMaxAbs();
-        float getFrequency();
         ~Audio();
     private:
         Audio() {};
