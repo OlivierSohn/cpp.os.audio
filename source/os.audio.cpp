@@ -370,7 +370,7 @@ bool Audio::do_wakeup() {
         {
             OSStatus res;
             res = startAudioUnit(audioUnit);
-            if( NoErr != res )
+            if( noErr != res )
             {
                 LG(ERR, "Audio::do_wakeup : startAudioUnit failed : %d", res);
                 A(0);
@@ -477,7 +477,7 @@ bool Audio::do_sleep() {
 #if TARGET_OS_IOS
     OSStatus err = stopProcessingAudio(audioUnit);
     
-    if( NoErr != err ) {
+    if( noErr != err ) {
         LG(ERR, "Audio::do_sleep : stopProcessingAudio failed : %d", err);
         A(0);
         return false;
