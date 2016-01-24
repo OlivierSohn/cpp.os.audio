@@ -8,7 +8,7 @@
 #include "cyclic.h"
 #include "slidingaverage.h"
 #include "cg.math.filter.h"
-#include "cg.math.sensors.h"
+#include "sensor.h"
 
 /* Select sample format. */
 #if 1
@@ -34,8 +34,9 @@ typedef char SAMPLE;
 
 const int SAMPLE_RATE(44100);
 
-namespace imajuscule
-{
+namespace imajuscule {
+    namespace Sensor {
+
     constexpr static const float minFreq = 80.f; // in herz (based on my voice :) )
     constexpr static const float maxFreq = 440.f; // in herz (also based on my voice :) )
     // and we want to have at least 3 samplings per period of max frequency, so:
@@ -45,9 +46,9 @@ namespace imajuscule
 
     
     // declared NO_LOCK to share Lock between multiple algorithms
-    struct FreqFromZC : public TimedCompute<FreqFromZC, NO_LOCK, float>
+    struct FreqFromZC : public Sensor<FreqFromZC, NO_LOCK, float>
     {
-        friend class TimedCompute<FreqFromZC, NO_LOCK, float>;
+        friend class Sensor<FreqFromZC, NO_LOCK, float>;
         
         std::string const & getVarName() { return name; }
 
@@ -74,7 +75,7 @@ namespace imajuscule
         }
         
         FreqFromZC(std::atomic_bool &a)
-        : TimedCompute<FreqFromZC, NO_LOCK, float>(&a)
+        : Sensor<FreqFromZC, NO_LOCK, float>(&a)
         , positive_zeros_dist(16, 0)
         , signal_range(0.f,0.f)
         {
@@ -198,14 +199,14 @@ namespace imajuscule
     */
     
     // declared NO_LOCK to share Lock between multiple algorithms
-    struct AlgoMax : public TimedCompute<AlgoMax, NO_LOCK, float>
+    struct AlgoMax : public Sensor<AlgoMax, NO_LOCK, float>
     {
-        friend class TimedCompute<AlgoMax, NO_LOCK, float>;
+        friend class Sensor<AlgoMax, NO_LOCK, float>;
         
         std::string const & getVarName() { return name; }
         
         AlgoMax(std::atomic_bool &a)
-        : TimedCompute<AlgoMax, NO_LOCK, float>(&a)
+        : Sensor<AlgoMax, NO_LOCK, float>(&a)
         {}
         InternalResult computeWhileLocked(float & f);
         
@@ -272,4 +273,5 @@ namespace imajuscule
         
         paTestData data;
     };
+}
 }
