@@ -10,8 +10,6 @@
 #include "cg.math.filter.h"
 #include "cg.math.sensors.h"
 
-#define DBG_SAMPLES 0
-
 /* Select sample format. */
 #if 1
 #define PA_SAMPLE_TYPE  paFloat32
@@ -46,6 +44,7 @@ namespace imajuscule
     constexpr static const int sampling_period = (int)(((float)SAMPLE_RATE) * time_between_representative_samples + 0.5f);
 
     
+    // declared NO_LOCK to share Lock between multiple algorithms
     struct FreqFromZC : public TimedCompute<FreqFromZC, NO_LOCK, float>
     {
         friend class TimedCompute<FreqFromZC, NO_LOCK, float>;
@@ -198,6 +197,7 @@ namespace imajuscule
     };
     */
     
+    // declared NO_LOCK to share Lock between multiple algorithms
     struct AlgoMax : public TimedCompute<AlgoMax, NO_LOCK, float>
     {
         friend class TimedCompute<AlgoMax, NO_LOCK, float>;
@@ -223,12 +223,12 @@ namespace imajuscule
     };
     
 
-    struct paTestData
+    struct paTestData : public ActivatorDelegate
     {
-        const size_t sizeSlidingAverage = 160;
+        enum { sizeSlidingAverage = 160 };
         
-        paTestData()
-        : algo_freq(used)
+        paTestData( Activator & a ) : ActivatorDelegate( a )
+        , algo_freq(used)
         , algo_max(used)
         , avg(sizeSlidingAverage)
         {}
@@ -242,24 +242,29 @@ namespace imajuscule
         
         AlgoMax algo_max;
         
-#if DBG_SAMPLES
-        unsigned int samplesSinceLastRead = 0;
-#endif
-
+    private:
+        
         slidingAverage avg;
 
         std::atomic_bool used { false };
     };
     
-    class Audio
+    class Audio : public Activator
     {
     public:
         static Audio & getInstance();
         void Init();
         void TearDown();
         ~Audio();
+
+    protected:
+        bool do_sleep() override;
+        bool do_wakeup() override;
     private:
-        Audio() {};
+        enum { AUDIO_UNUSED_FRAME_COUNT_FOR_SLEEP = 100 };
+        Audio() : Activator ( AUDIO_UNUSED_FRAME_COUNT_FOR_SLEEP ),
+        data( *this ){};
+        
         static Audio * gInstance;
         bool bInitialized_ = false;
         typedef void PaStream; //#include "portaudio.h"

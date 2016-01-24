@@ -2,15 +2,14 @@
 #include "TargetConditionals.h"
 #endif
 
-#include <stdlib.h> // pulls in declaration of malloc, free
+#include <stdlib.h>
 #include <string.h>
 #include <cerrno>
 #include <algorithm>
 #include <functional>
 #include <cmath>
 #include <map>
-
-#include "os.audio.h"
+#include <cstdlib>
 
 #if TARGET_OS_IOS
 #import <AudioToolbox/AudioToolbox.h>
@@ -22,8 +21,11 @@
 
 // fft method is not easy to implement, i prefered zero crossing instead but i leave it here just in case
 //#include "kiss_fftr.h"
-#include <cstdlib>
+
 #include "os.log.h"
+
+#include "os.audio.h"
+
 using namespace imajuscule;
 
 #ifdef _WIN32
@@ -139,12 +141,8 @@ void paTestData::step(const SAMPLE *rptr, unsigned long framesPerBuffer)
                                      std::memory_order_relaxed))
     {}
     
-    if(rptr)
+    if( !onStep() && rptr )
     {
-#if DBG_SAMPLES
-        samplesSinceLastRead += framesPerBuffer;
-#endif
-
         for( unsigned long i=0; i<framesPerBuffer; i++ )
         {
             auto val = *rptr++;
@@ -287,32 +285,32 @@ int initAudioStreams(AudioUnit & audioUnit, void * pData) {
     return 0;
 }
 
-int startAudioUnit(AudioUnit audioUnit) {
-    if(AudioUnitInitialize(audioUnit) != noErr) {
-        return 1;
+OSStatus startAudioUnit(AudioUnit audioUnit) {
+    OSStatus res = AudioUnitInitialize(audioUnit);
+    if( res != noErr ) {
+        return res;
     }
     
-    if(AudioOutputUnitStart(audioUnit) != noErr) {
-        return 1;
-    }
-    
-    return 0;
+    return AudioOutputUnitStart(audioUnit);
 }
 
-int stopProcessingAudio(AudioUnit audioUnit) {
-    if(AudioOutputUnitStop(audioUnit) != noErr) {
-        return 1;
+OSStatus stopProcessingAudio(AudioUnit audioUnit) {
+    OSStatus res = AudioOutputUnitStop(audioUnit);
+    if( res != noErr ) {
+        return res;
     }
     
-    if(AudioUnitUninitialize(audioUnit) != noErr) {
-        return 1;
+    res = AudioUnitUninitialize(audioUnit);
+    if( res != noErr ) {
+        return res;
     }
     
     audioUnit = NULL;
-    return 0;
+    return noErr;
 }
 
 #endif
+
 void Audio::Init()
 {
     if(bInitialized_)
@@ -323,39 +321,11 @@ void Audio::Init()
     
     data.algo_max.Register();
     data.algo_freq.Register();
-
+    
+    data.algo_max.setActivator(this);
+    data.algo_freq.setActivator(this);
 #if TARGET_OS_IOS
-    if(0==initAudioSession())
-    {
-        bInitialized_ = true;
-        
-        if(0==initAudioStreams(audioUnit, &data))
-        {
-            if(0==startAudioUnit(audioUnit))
-            {
-            }
-            else
-            {
-                LG(ERR, "startAudioUnit failed");
-                A(0);
-                return;
-            }
-        }
-        else
-        {
-            LG(ERR, "initAudioStreams failed");
-            A(0);
-            return;
-        }
-    }
-    else
-    {
-        LG(ERR, "initAudioSession failed");
-        A(0);
-        return;
-    }
 #else
-
     // set minimum latency env var to speed things up
     const char * lat = "PA_MIN_LATENCY_MSEC";
     const char * latVal = "1";
@@ -368,7 +338,7 @@ void Audio::Init()
     
     // verify that env var was set
 #ifdef _WIN32
-    char * test=0; 
+    char * test=0;
     size_t sz=0;
     if (0 != _dupenv_s(&test, &sz, lat) )
     {
@@ -385,37 +355,70 @@ void Audio::Init()
         free(test);
 #endif
     }
+#endif
+    
+    bInitialized_ = true;
+}
 
+bool Audio::do_wakeup() {
+    LG(INFO, "Audio::do_wakeup : Audio will wake up");
+#if TARGET_OS_IOS
+    if(0==initAudioSession())
+    {
+        if(0==initAudioStreams(audioUnit, &data))
+        {
+            OSStatus res;
+            res = startAudioUnit(audioUnit);
+            if( NoErr != res )
+            {
+                LG(ERR, "Audio::do_wakeup : startAudioUnit failed : %d", res);
+                A(0);
+                return false;
+            }
+        }
+        else
+        {
+            LG(ERR, "Audio::do_wakeup : initAudioStreams failed");
+            A(0);
+            return false;
+        }
+    }
+    else
+    {
+        LG(ERR, "Audio::do_wakeup : initAudioSession failed");
+        A(0);
+        return false;
+    }
+#else
 
-    LG(INFO, "Audio::Init : initializing %s", Pa_GetVersionText());
+    LG(INFO, "Audio::do_wakeup : initializing %s", Pa_GetVersionText());
     PaError err = Pa_Initialize();
     if(likely(err == paNoError))
     {
-        LG(INFO, "Audio::Init : done initializing %s", Pa_GetVersionText());
-        bInitialized_ = true;
+        LG(INFO, "Audio::do_wakeup : done initializing %s", Pa_GetVersionText());
         
-        LG(INFO,"%d host apis", Pa_GetHostApiCount());
+        LG(INFO,"Audio::do_wakeup : %d host apis", Pa_GetHostApiCount());
         
         PaStreamParameters inputParameters;
         inputParameters.device = Pa_GetDefaultInputDevice(); /* default input device */
         if (unlikely(inputParameters.device == paNoDevice)) {
-            LG(ERR, "Audio::get : No default input device");
+            LG(ERR, "Audio::do_wakeup : No default input device");
             A(0);
-            return;
+            return false;
         }
-        LG(INFO, "audio device : id %d", inputParameters.device);
+        LG(INFO, "Audio::do_wakeup : audio device : id %d", inputParameters.device);
         
         inputParameters.channelCount = NUM_CHANNELS;
         inputParameters.sampleFormat = PA_SAMPLE_TYPE;
         
         auto pi = Pa_GetDeviceInfo( inputParameters.device );
-        LG(INFO, "audio device : hostApi    %d", pi->hostApi);
-        LG(INFO, "audio device : name       %s", pi->name);
-        LG(INFO, "audio device : maxIC      %d", pi->maxInputChannels);
-        LG(INFO, "audio device : maxOC      %d", pi->maxOutputChannels);
-        LG(INFO, "audio device : def. sr    %f", pi->defaultSampleRate);
-        LG(INFO, "audio device : def. lilat %f", pi->defaultLowInputLatency);
-        LG(INFO, "audio device : def. hilat %f", pi->defaultHighInputLatency);
+        LG(INFO, "Audio::do_wakeup : audio device : hostApi    %d", pi->hostApi);
+        LG(INFO, "Audio::do_wakeup : audio device : name       %s", pi->name);
+        LG(INFO, "Audio::do_wakeup : audio device : maxIC      %d", pi->maxInputChannels);
+        LG(INFO, "Audio::do_wakeup : audio device : maxOC      %d", pi->maxOutputChannels);
+        LG(INFO, "Audio::do_wakeup : audio device : def. sr    %f", pi->defaultSampleRate);
+        LG(INFO, "Audio::do_wakeup : audio device : def. lilat %f", pi->defaultLowInputLatency);
+        LG(INFO, "Audio::do_wakeup : audio device : def. hilat %f", pi->defaultHighInputLatency);
 
         inputParameters.suggestedLatency =
             // on windows it's important to not set suggestedLatency too low, else samples are lost (for example only 16 are available per timestep)
@@ -436,60 +439,76 @@ void Audio::Init()
         if( unlikely(err != paNoError) )
         {
             stream = NULL;
-            LG(ERR, "Pa_OpenStream failed : %s", Pa_GetErrorText(err));
+            LG(ERR, "Audio::do_wakeup : Pa_OpenStream failed : %s", Pa_GetErrorText(err));
             A(0);
-            return;
+            return false;
         }
         
         const PaStreamInfo * si = Pa_GetStreamInfo(stream);
         
-        LG(INFO, "stream : output lat  %f", si->outputLatency);
-        LG(INFO, "stream : input lat   %f", si->inputLatency);
-        LG(INFO, "stream : sample rate %f", si->sampleRate);
+        LG(INFO, "Audio::do_wakeup : stream : output lat  %f", si->outputLatency);
+        LG(INFO, "Audio::do_wakeup : stream : input lat   %f", si->inputLatency);
+        LG(INFO, "Audio::do_wakeup : stream : sample rate %f", si->sampleRate);
         
         err = Pa_StartStream( stream );
         if( unlikely(err != paNoError) )
         {
-            LG(ERR, "Pa_StartStream failed : %s", Pa_GetErrorText(err));
+            LG(ERR, "Audio::do_wakeup : Pa_StartStream failed : %s", Pa_GetErrorText(err));
             A(0);
-            return;
+            return false;
         }
     }
     else
     {
-        LG(ERR, "Audio::Init : PA_Initialize failed : %s", Pa_GetErrorText(err));
+        LG(ERR, "Audio::do_wakeup : PA_Initialize failed : %s", Pa_GetErrorText(err));
         A(0);
+        return false;
     }
 #endif
+
+    LG(INFO, "Audio::do_wakeup : Audio is woken up");
+    return true;
 }
+
+bool Audio::do_sleep() {
+    LG(INFO, "Audio::do_sleep : Audio will sleep");
+
+#if TARGET_OS_IOS
+    OSStatus err = stopProcessingAudio(audioUnit);
+    
+    if( NoErr != err ) {
+        LG(ERR, "Audio::do_sleep : stopProcessingAudio failed : %d", err);
+        A(0);
+        return false;
+    }
+#else
+    if(stream)
+    {
+        PaError err = Pa_CloseStream( stream );
+        if( unlikely(err != paNoError) ) {
+            LG(ERR, "Audio::do_sleep : Pa_CloseStream failed : %s", Pa_GetErrorText(err));
+            A(0);
+            return false;
+        }
+    }
+    
+    PaError err = Pa_Terminate();
+    if(unlikely(err != paNoError))
+    {
+        LG(ERR, "Audio::do_sleep : PA_Terminate failed : %s", Pa_GetErrorText(err));
+        return false;
+    }
+#endif
+    
+    LG(INFO, "Audio::do_sleep : Audio sleeping");
+    return true;
+}
+
 void Audio::TearDown()
 {
     if(likely(bInitialized_))
     {
-#if TARGET_OS_IOS
-        if(0==stopProcessingAudio(audioUnit))
-        {
-        }
-        else{
-            LG(ERR, "stopProcessingAudio failed");
-            A(0);
-        }
-#else
-        if(stream)
-        {
-            PaError err = Pa_CloseStream( stream );
-            if( unlikely(err != paNoError) ) {
-                LG(ERR, "Pa_CloseStream failed : %s", Pa_GetErrorText(err));
-                A(0);
-            }
-        }
-        
-        PaError err = Pa_Terminate();
-        if(unlikely(err != paNoError))
-        {
-            LG(ERR, "PA_Terminate failed : %s", Pa_GetErrorText(err));
-        }
-#endif
+        sleep();
         
         data.algo_freq.Unregister();
         data.algo_max.Unregister();
