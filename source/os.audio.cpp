@@ -507,10 +507,10 @@ bool Audio::do_sleep() {
 
 void Audio::TearDown()
 {
+    Activator::sleep();
+
     if(likely(bInitialized_))
     {
-        sleep();
-        
         data.algo_freq.Unregister();
         data.algo_max.Unregister();
         
