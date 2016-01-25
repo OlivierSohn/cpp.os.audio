@@ -224,14 +224,15 @@ namespace imajuscule {
     };
     
 
-    struct paTestData : public ActivatorDelegate
+    struct paTestData
     {
         enum { sizeSlidingAverage = 160 };
         
-        paTestData( Activator & a ) : ActivatorDelegate( a )
-        , algo_freq(used)
+        paTestData( Activator & a ) :
+        algo_freq(used)
         , algo_max(used)
         , avg(sizeSlidingAverage)
+        , activator(a)
         {}
         
         void step(const SAMPLE * inputBuffer, unsigned long framesPerBuffer);
@@ -244,7 +245,7 @@ namespace imajuscule {
         AlgoMax algo_max;
         
     private:
-        
+        Activator & activator;
         slidingAverage avg;
 
         std::atomic_bool used { false };

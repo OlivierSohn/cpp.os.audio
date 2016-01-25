@@ -142,7 +142,7 @@ void paTestData::step(const SAMPLE *rptr, unsigned long framesPerBuffer)
                                      std::memory_order_relaxed))
     {}
     
-    if( !onStep() && rptr )
+    if( !activator.onStep() && rptr )
     {
         for( unsigned long i=0; i<framesPerBuffer; i++ )
         {
