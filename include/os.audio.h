@@ -122,7 +122,7 @@ namespace imajuscule {
         
         range<float> signal_range; // range is representative of a single time step (except for very first calculation of a series)
 
-        std::string name = std::string("AUF");
+        std::string const name = std::string("AUF");
     };
     
     /*
