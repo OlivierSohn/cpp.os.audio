@@ -57,16 +57,17 @@ const int NUM_CHANNELS(1);
  ** that could mess up the system like calling malloc() or free().
  */
 #if TARGET_OS_IOS
-AudioUnit audioUnit = NULL;
-std::vector<float> convertedSampleBuffer;
-OSStatus renderCallback(void                        *userData,
-                        AudioUnitRenderActionFlags  *actionFlags,
-                        const AudioTimeStamp        *audioTimeStamp,
-                        UInt32                      busNumber,
-                        UInt32                      numFrames,
-                        AudioBufferList             *buffers) {
+AudioUnit audioUnit_in = NULL;
+AudioUnit audioUnit_out = NULL;
+std::vector<float> convertedSampleBuffer, outputBuffer;
+OSStatus renderCallback_in(void                        *userData,
+                           AudioUnitRenderActionFlags  *actionFlags,
+                           const AudioTimeStamp        *audioTimeStamp,
+                           UInt32                      busNumber,
+                           UInt32                      numFrames,
+                           AudioBufferList             *buffers) {
     
-    OSStatus status = AudioUnitRender(audioUnit,
+    OSStatus status = AudioUnitRender(audioUnit_in,
                                       actionFlags,
                                       audioTimeStamp,
                                       1,
@@ -110,9 +111,43 @@ OSStatus renderCallback(void                        *userData,
     }*/
 
     // mute audio
-    for (UInt32 i=0; i<buffers->mNumberBuffers; ++i)
+    for (UInt32 i=0; i<buffers->mNumberBuffers; ++i) {
         memset(buffers->mBuffers[i].mData, 0, buffers->mBuffers[i].mDataByteSize);
-
+    }
+    
+    return noErr;
+}
+OSStatus renderCallback_out(void                        *userData,
+                        AudioUnitRenderActionFlags  *actionFlags,
+                        const AudioTimeStamp        *audioTimeStamp,
+                        UInt32                      busNumber,
+                        UInt32                      numFrames,
+                        AudioBufferList             *buffers) {
+    
+    OSStatus status = AudioUnitRender(audioUnit_out,
+                                      actionFlags,
+                                      audioTimeStamp,
+                                      1,
+                                      numFrames,
+                                      buffers);
+    if(status != noErr) {
+        LG(ERR,"renderCallback (audio) : error %d", status);
+        A(0);
+        return status;
+    }
+    
+    outputData *data = (outputData*)userData;
+    outputBuffer.resize(numFrames);
+    
+    data->step(outputBuffer.data(), numFrames);
+    
+    for (UInt32 i=0; i<buffers->mNumberBuffers; ++i) {
+        memset(buffers->mBuffers[i].mData, 0, buffers->mBuffers[i].mDataByteSize);
+        for( int j=0; j<buffers->mBuffers[i].mDataByteSize; j++ ) {
+            ((float*)(buffers->mBuffers[i].mData))[j] = (SInt16)(outputBuffer[j] * 32767.f);
+        }
+    }
+    
     return noErr;
 }
 #else
@@ -222,7 +257,7 @@ int initAudioSession() {
     return 0;
 }
 
-int initAudioStreams(AudioUnit & audioUnit, void * pData) {
+int initAudioStreams(AudioUnit & audioUnit, void * pData, AURenderCallback cb) {
     UInt32 audioCategory = //kAudioSessionCategory_RecordAudio;
     kAudioSessionCategory_PlayAndRecord;
     if(AudioSessionSetProperty(kAudioSessionProperty_AudioCategory,
@@ -254,7 +289,7 @@ int initAudioStreams(AudioUnit & audioUnit, void * pData) {
     }
     
     AURenderCallbackStruct callbackStruct;
-    callbackStruct.inputProc = renderCallback; // Render function
+    callbackStruct.inputProc = cb;
     callbackStruct.inputProcRefCon = pData;
     if(AudioUnitSetProperty(audioUnit, kAudioUnitProperty_SetRenderCallback,
                             kAudioUnitScope_Input, 0, &callbackStruct,
@@ -388,10 +423,10 @@ bool AudioIn::do_wakeup() {
 #if TARGET_OS_IOS
     if(0==initAudioSession())
     {
-        if(0==initAudioStreams(audioUnit, &data))
+        if(0==initAudioStreams(audioUnit_in, &data, renderCallback_in))
         {
             OSStatus res;
-            res = startAudioUnit(audioUnit);
+            res = startAudioUnit(audioUnit_in);
             if( noErr != res )
             {
                 LG(ERR, "AudioIn::do_wakeup : startAudioUnit failed : %d", res);
@@ -496,6 +531,32 @@ bool AudioIn::do_wakeup() {
 void AudioOut::Init() {
     LG(INFO, "AudioOut::Init");
 #if TARGET_OS_IOS
+    bInitialized = true;
+    if(0==initAudioSession())
+    {
+        if(0==initAudioStreams(audioUnit_out, &data, renderCallback_out))
+        {
+            OSStatus res = startAudioUnit(audioUnit_out);
+            if( noErr != res )
+            {
+                LG(ERR, "AudioOut::Init : startAudioUnit failed : %d", res);
+                A(0);
+                return;
+            }
+        }
+        else
+        {
+            LG(ERR, "AudioOut::Init : initAudioStreams failed");
+            A(0);
+            return;
+        }
+    }
+    else
+    {
+        LG(ERR, "AudioOut::Init : initAudioSession failed");
+        A(0);
+        return;
+    }
 #else
     
     LG(INFO, "AudioOut::Init : initializing %s", Pa_GetVersionText());
@@ -581,8 +642,7 @@ bool AudioIn::do_sleep() {
     LG(INFO, "AudioIn::do_sleep : AudioIn will sleep");
 
 #if TARGET_OS_IOS
-    OSStatus err = stopProcessingAudio(audioUnit);
-    
+    OSStatus err = stopProcessingAudio(audioUnit_in);
     if( noErr != err ) {
         LG(ERR, "AudioIn::do_sleep : stopProcessingAudio failed : %d", err);
         A(0);
@@ -615,6 +675,15 @@ void AudioOut::TearDown() {
     LG(INFO, "AudioOut::TearDown");
     
 #if TARGET_OS_IOS
+    if( bInitialized ) {
+        bInitialized = false;
+        OSStatus err = stopProcessingAudio(audioUnit_out);
+        if( noErr != err ) {
+            LG(ERR, "AudioOut::TearDown : stopProcessingAudio failed : %d", err);
+            A(0);
+            return;
+        }
+    }
 #else
     if(stream)
     {
