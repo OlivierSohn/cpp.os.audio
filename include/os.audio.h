@@ -251,28 +251,67 @@ namespace imajuscule {
         std::atomic_bool used { false };
     };
     
-    class AudioIn : public Activator
-    {
-    public:
-        static AudioIn & getInstance();
-        void Init();
-        void TearDown();
-        ~AudioIn();
-
-    protected:
-        bool do_sleep() override;
-        bool do_wakeup() override;
-    private:
-        enum { AUDIO_UNUSED_FRAME_COUNT_FOR_SLEEP = 100 };
-        AudioIn() : Activator ( AUDIO_UNUSED_FRAME_COUNT_FOR_SLEEP ),
-        data( *this ){};
-        
-        static AudioIn * gInstance;
-        bool bInitialized_ = false;
         typedef void PaStream; //#include "portaudio.h"
-        PaStream *stream = NULL;
+        class Audio;
+        class AudioIn : public Activator
+        {
+            friend class Audio;
+        public:
+            void Init();
+            void TearDown();
+        protected:
+            bool do_wakeup() override;
+            bool do_sleep() override;
+        private:
+            enum { AUDIO_UNUSED_FRAME_COUNT_FOR_SLEEP = 100 };
+            AudioIn() : Activator ( AUDIO_UNUSED_FRAME_COUNT_FOR_SLEEP ),
+            data( *this ){};
+            
+            bool bInitialized_ = false;
+            PaStream *stream = NULL;
+            
+            paTestData data;
+        };
         
-        paTestData data;
-    };
-}
+        struct outputData {
+        private:
+
+            int nSamplesToWrite = 0;
+        public:
+            void step(SAMPLE * outputBuffer, unsigned long framesPerBuffer);
+            
+            std::atomic_bool used { false };
+
+            int sound_duration = 0;
+        };
+        
+        class AudioOut {
+            friend class Audio;
+            void Init();
+            void TearDown();
+
+            PaStream *stream = NULL;
+            bool bInitialized = false;
+            outputData data;
+            
+        public:
+            enum Sound { NONE, SINE, TRIANGLE, NOISE };
+            void play( Sound sound, float freq_hz, float duration_ms  );
+        };
+        
+        class Audio {
+        public:
+            void Init();
+            void TearDown();
+            static Audio & getInstance();
+            
+            AudioOut & out() { return audioOut; }
+
+        private:
+            Audio(){};
+            static Audio * gInstance;
+            AudioIn audioIn;
+            AudioOut audioOut;
+        };
+    }
 }

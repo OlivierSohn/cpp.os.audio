@@ -124,12 +124,29 @@ static int recordCallback( const void *inputBuffer, void *outputBuffer,
 {
     paTestData *data = (paTestData*)userData;
 
-    (void) outputBuffer; /* Prevent unused variable warnings. */
+    (void) outputBuffer;
     (void) timeInfo;
     (void) statusFlags;
     (void) userData;
     
     data->step((const SAMPLE*)inputBuffer, framesPerBuffer);
+    
+    return paContinue;
+}
+static int playCallback( const void *inputBuffer, void *outputBuffer,
+                          unsigned long framesPerBuffer,
+                          const PaStreamCallbackTimeInfo* timeInfo,
+                          PaStreamCallbackFlags statusFlags,
+                          void *userData )
+{
+    outputData *data = (outputData*)userData;
+    
+    (void) outputBuffer;
+    (void) timeInfo;
+    (void) statusFlags;
+    (void) userData;
+    
+    data->step((SAMPLE*)outputBuffer, framesPerBuffer);
     
     return paContinue;
 }
@@ -159,12 +176,11 @@ void paTestData::step(const SAMPLE *rptr, unsigned long framesPerBuffer)
 }
 
 
-AudioIn::~AudioIn() {}
-AudioIn * AudioIn::gInstance = NULL;
-AudioIn& AudioIn::getInstance()
+Audio * Audio::gInstance = NULL;
+Audio& Audio::getInstance()
 {
     if(!gInstance)
-        gInstance = new AudioIn();
+        gInstance = new Audio();
     return *gInstance;
 }
 
@@ -312,19 +328,8 @@ OSStatus stopProcessingAudio(AudioUnit audioUnit) {
 
 #endif
 
-void AudioIn::Init()
-{
-    if(bInitialized_)
-    {
-        LG(WARN, "AudioIn::Init already initialized");
-        return;
-    }
-    
-    data.algo_max.Register();
-    data.algo_freq.Register();
-    
-    data.algo_max.setActivator(this);
-    data.algo_freq.setActivator(this);
+void Audio::Init() {
+
 #if TARGET_OS_IOS
 #else
     // set minimum latency env var to speed things up
@@ -348,7 +353,7 @@ void AudioIn::Init()
 #else
     const char * test = getenv (lat);
 #endif
-
+    
     if_A(test)
     {
         A(!strcmp(test, latVal));
@@ -358,6 +363,23 @@ void AudioIn::Init()
     }
 #endif
     
+    audioIn.Init();
+    audioOut.Init();
+}
+void AudioIn::Init()
+{
+    if(bInitialized_)
+    {
+        LG(WARN, "AudioIn::Init already initialized");
+        return;
+    }
+    
+    data.algo_max.Register();
+    data.algo_freq.Register();
+    
+    data.algo_max.setActivator(this);
+    data.algo_freq.setActivator(this);
+
     bInitialized_ = true;
 }
 
@@ -401,7 +423,7 @@ bool AudioIn::do_wakeup() {
         LG(INFO,"AudioIn::do_wakeup : %d host apis", Pa_GetHostApiCount());
         
         PaStreamParameters inputParameters;
-        inputParameters.device = Pa_GetDefaultInputDevice(); /* default input device */
+        inputParameters.device = Pa_GetDefaultInputDevice();
         if (unlikely(inputParameters.device == paNoDevice)) {
             LG(ERR, "AudioIn::do_wakeup : No default input device");
             A(0);
@@ -471,6 +493,90 @@ bool AudioIn::do_wakeup() {
     return true;
 }
 
+void AudioOut::Init() {
+    LG(INFO, "AudioOut::Init");
+#if TARGET_OS_IOS
+#else
+    
+    LG(INFO, "AudioOut::Init : initializing %s", Pa_GetVersionText());
+    PaError err = Pa_Initialize();
+    if(likely(err == paNoError))
+    {
+        bInitialized = true;
+        
+        LG(INFO, "AudioOut::Init : done initializing %s", Pa_GetVersionText());
+        
+        LG(INFO,"AudioOut::Init : %d host apis", Pa_GetHostApiCount());
+        
+        PaStreamParameters p;
+        p.device = Pa_GetDefaultOutputDevice();
+        if (unlikely(p.device == paNoDevice)) {
+            LG(ERR, "AudioOut::Init : No default output device");
+            A(0);
+            return;
+        }
+        LG(INFO, "AudioOut::Init : audio device : id %d", p.device);
+        
+        p.channelCount = NUM_CHANNELS;
+        p.sampleFormat = PA_SAMPLE_TYPE;
+        
+        auto pi = Pa_GetDeviceInfo( p.device );
+        LG(INFO, "AudioOut::Init : audio device : hostApi    %d", pi->hostApi);
+        LG(INFO, "AudioOut::Init : audio device : name       %s", pi->name);
+        LG(INFO, "AudioOut::Init : audio device : maxIC      %d", pi->maxInputChannels);
+        LG(INFO, "AudioOut::Init : audio device : maxOC      %d", pi->maxOutputChannels);
+        LG(INFO, "AudioOut::Init : audio device : def. sr    %f", pi->defaultSampleRate);
+        LG(INFO, "AudioOut::Init : audio device : def. lilat %f", pi->defaultLowInputLatency);
+        LG(INFO, "AudioOut::Init : audio device : def. hilat %f", pi->defaultHighInputLatency);
+        
+        p.suggestedLatency =
+        // on windows it's important to not set suggestedLatency too low, else samples are lost (for example only 16 are available per timestep)
+        pi->defaultLowInputLatency;
+        
+        p.hostApiSpecificStreamInfo = NULL;
+        
+        /* Record some audio. -------------------------------------------- */
+        PaError err = Pa_OpenStream(
+                                    &stream,
+                                    nullptr,
+                                    &p,                  /* &outputParameters, */
+                                    SAMPLE_RATE,
+                                    0 /*if not 0 an additional buffering may be used for some host apis, increasing latency*/,
+                                    paClipOff,      /* we won't output out of range samples so don't bother clipping them */
+                                    playCallback,
+                                    &data);
+        if( unlikely(err != paNoError) )
+        {
+            stream = NULL;
+            LG(ERR, "AudioOut::Init : Pa_OpenStream failed : %s", Pa_GetErrorText(err));
+            A(0);
+            return;
+        }
+        
+        const PaStreamInfo * si = Pa_GetStreamInfo(stream);
+        
+        LG(INFO, "AudioOut::Init : stream : output lat  %f", si->outputLatency);
+        LG(INFO, "AudioOut::Init : stream : input lat   %f", si->inputLatency);
+        LG(INFO, "AudioOut::Init : stream : sample rate %f", si->sampleRate);
+        
+        err = Pa_StartStream( stream );
+        if( unlikely(err != paNoError) )
+        {
+            LG(ERR, "AudioOut::Init : Pa_StartStream failed : %s", Pa_GetErrorText(err));
+            A(0);
+            return;
+        }
+    }
+    else
+    {
+        LG(ERR, "AudioOut::Init : PA_Initialize failed : %s", Pa_GetErrorText(err));
+        A(0);
+        return;
+    }
+#endif
+    
+    LG(INFO, "AudioOut::Init : success");
+}
 bool AudioIn::do_sleep() {
     LG(INFO, "AudioIn::do_sleep : AudioIn will sleep");
 
@@ -505,6 +611,36 @@ bool AudioIn::do_sleep() {
     return true;
 }
 
+void AudioOut::TearDown() {
+    LG(INFO, "AudioOut::TearDown");
+    
+#if TARGET_OS_IOS
+#else
+    if(stream)
+    {
+        PaError err = Pa_CloseStream( stream );
+        if( unlikely(err != paNoError) ) {
+            LG(ERR, "AudioOut::TearDown : Pa_CloseStream failed : %s", Pa_GetErrorText(err));
+            A(0);
+            return;
+        }
+    }
+    
+    if( bInitialized ) { // don't call Pa_Terminate if Pa_Initialize failed
+        bInitialized = false;
+
+        PaError err = Pa_Terminate();
+        if(unlikely(err != paNoError))
+        {
+            LG(ERR, "AudioOut::TearDown : PA_Terminate failed : %s", Pa_GetErrorText(err));
+            return;
+        }
+    }
+#endif
+    
+    LG(INFO, "AudioOut::TearDown : success");
+}
+
 void AudioIn::TearDown()
 {
     Activator::sleep();
@@ -521,6 +657,61 @@ void AudioIn::TearDown()
         LG(ERR, "AudioIn::TearDown : was not initialized");
     }
 }
+
+void Audio::TearDown() {
+    audioOut.TearDown();
+    audioIn.TearDown();
+}
+
+void AudioOut::play( Sound sound, float freq_hz, float duration_ms  ) {
+    
+    int nSamples = (int)( ((float)SAMPLE_RATE) * 0.001f * duration_ms );
+
+    
+    bool bFalse( false );
+    while (!data.used.compare_exchange_strong(bFalse, true,
+                                         std::memory_order_acquire,
+                                         std::memory_order_relaxed))
+    {}
+    
+    data.sound_duration = nSamples;
+    
+    data.used.store(false, std::memory_order_release);
+}
+
+void outputData::step(SAMPLE *outputBuffer, unsigned long framesPerBuffer) {
+    bool bFalse( false );
+    while (!used.compare_exchange_strong(bFalse, true,
+                                              std::memory_order_acquire,
+                                              std::memory_order_relaxed))
+    {}
+
+    if( nSamplesToWrite <= 0 ) {
+        if( sound_duration > 0 ) {
+            nSamplesToWrite = sound_duration;
+            sound_duration = 0;
+        }
+    }
+    
+    used.store(false, std::memory_order_release);
+    unsigned long i=0;
+    for( ; i<framesPerBuffer; i++ ) {
+        const float amplitude = 0.1f;
+        if( nSamplesToWrite > 0 ) {
+            *outputBuffer = amplitude * (float)rand()/(float)(RAND_MAX);
+            outputBuffer++;
+            nSamplesToWrite --;
+        } else {
+            break;
+        }
+    }
+    for( ; i<framesPerBuffer; i++ ) {
+        *outputBuffer = 0;
+        outputBuffer++;
+    }
+}
+
+
 InternalResult AlgoMax::computeWhileLocked(float &f)
 {
     f = maxAbsSinceLastRead;
