@@ -736,6 +736,7 @@ void AudioOut::play( Sound sound, float freq_hz, float duration_ms  ) {
     
     int nSamples = (int)( ((float)SAMPLE_RATE) * 0.001f * duration_ms );
 
+    auto const & s = sounds.get( { sound, freq_hz } );
     
     bool bFalse( false );
     while (!data.used.compare_exchange_strong(bFalse, true,
@@ -743,43 +744,203 @@ void AudioOut::play( Sound sound, float freq_hz, float duration_ms  ) {
                                          std::memory_order_relaxed))
     {}
     
-    data.sound_duration = nSamples;
+    data.requests.emplace(s, nSamples);
     
     data.used.store(false, std::memory_order_release);
 }
 
 void outputData::step(SAMPLE *outputBuffer, unsigned long framesPerBuffer) {
-    bool bFalse( false );
-    while (!used.compare_exchange_strong(bFalse, true,
-                                              std::memory_order_acquire,
-                                              std::memory_order_relaxed))
-    {}
+    
+    if( remaining_samples_count <= 0 ) {
+        
+        // lock
+        bool bFalse( false );
+        while (!used.compare_exchange_strong(bFalse, true,
+                                             std::memory_order_acquire,
+                                             std::memory_order_relaxed))
+        {}
 
-    if( nSamplesToWrite <= 0 ) {
-        if( sound_duration > 0 ) {
-            nSamplesToWrite = sound_duration;
-            sound_duration = 0;
+        if (!requests.empty())
+        {
+            auto & request = requests.front();
+            
+            A( request.samples_count > 0 );
+            
+            playing_sound = &request.sound;
+            remaining_samples_count = request.samples_count;
+            next_sample_index = 0;
+
+            requests.pop();
         }
+
+        // unlock
+        used.store(false, std::memory_order_release);
     }
     
-    used.store(false, std::memory_order_release);
+    auto s = -1;
     unsigned long i=0;
     for( ; i<framesPerBuffer; i++ ) {
         const float amplitude = 0.1f;
-        if( nSamplesToWrite > 0 ) {
-            *outputBuffer = amplitude * (float)rand()/(float)(RAND_MAX);
-            outputBuffer++;
-            nSamplesToWrite --;
+        if( remaining_samples_count > 0 ) {
+            if( s == -1 ) {
+                s = (int) playing_sound->values.size();
+            }
+            if( next_sample_index >= s ) {
+                next_sample_index = 0;
+            }
+
+            *outputBuffer = amplitude * playing_sound->values[next_sample_index];
+            ++outputBuffer;
+            ++next_sample_index;
+            --remaining_samples_count;
         } else {
             break;
         }
     }
+
+    // fill the rest with zeros
     for( ; i<framesPerBuffer; i++ ) {
         *outputBuffer = 0;
         outputBuffer++;
     }
 }
 
+static float triangle( float angle_radians ) {
+    A(angle_radians >= 0.f);
+    A(angle_radians <= 2.f * (float)M_PI);
+    
+    static const float inv_pi = 1.f / (float)M_PI;
+    
+    angle_radians *= inv_pi;
+    if( angle_radians < 0.5f ) {        // 0 .. 0.5   ->  0 .. 1
+        return 2.f * angle_radians;
+    } else if( angle_radians < 1.5f ) { // 0.5 .. 1.5 ->  1 .. -1
+        return 2.f - 2.f * angle_radians;
+    } else {                            // 1.5 .. 2   ->  -1 .. 0
+        A( angle_radians <= 2.f );
+        return -4.f + 2.f * angle_radians;
+    }
+}
+static float saw( float angle_radians ) {
+    A(angle_radians >= 0.f);
+    A(angle_radians <= 2.f * (float)M_PI);
+    
+    static const float inv_pi = 1.f / (float)M_PI;
+    
+    angle_radians *= inv_pi;
+    
+    // 0 .. 2 -> 1 .. -1
+    return 1.f - angle_radians;
+}
+static float square( float angle_radians ) {
+    A(angle_radians >= 0.f);
+    A(angle_radians <= 2.f * (float)M_PI);
+    
+    static const float inv_pi = 1.f / (float)M_PI;
+    
+    angle_radians *= inv_pi;
+    
+    if( angle_radians <= 1.f ) { // 0 .. 1 ->  1
+        return 1.f;
+    } else {                    // 1 .. 2 ->  -1
+        A(angle_radians <= 2.f);
+        return -1.f;
+    }
+}
+
+static float my_rand(float) {
+    float between_zero_one = (float)rand()/(float)(RAND_MAX);
+    return (between_zero_one * 2.f) - 1.f;
+}
+
+template < typename F >
+void soundBuffer::generate( int period, F f ) {
+    
+    values.reserve( period );
+    
+    // Let's compute the waveform. First sample is non zero, last sample is zero, so the mapping is:
+    //
+    //  sample(int) [0 .. period - 1]  ->  radian(float) [2*pi/period .. 2*pi]
+    //
+    float increment = 2.f * (float)M_PI / (float) period;
+    
+    for( int i=0; i<period;) {
+        i++;
+        values.emplace_back( f( increment * (float)i ) );
+    }
+    
+    A( (int)values.size() == period );
+}
+soundBuffer::soundBuffer( soundId const & id ) {
+    switch (id.type) {            
+        case NOISE:
+        {
+            generate( id.period_length, my_rand );
+            if( id.period_length < 20 ) {
+                // fix for small number of random values
+                {
+                    // center around zero
+                    
+                    auto avg(0.f);
+                    for( auto const & v : values ) {
+                        avg += v;
+                    }
+                    avg /= (float)values.size();
+                    for( auto & v : values ) {
+                        v -= avg;
+                    }
+                }
+                {
+                    // maximize
+                    
+                    auto M(0.f);
+                    for (auto const & v : values) {
+                        M = std::max( M, std::abs( v ) );
+                    }
+                    if( M < 0.5 ) {
+                        auto fact = 0.7f/M;
+                        for( auto & v : values ) {
+                            v *= fact;
+                        }
+                    }
+                }
+            }
+            break;
+        }
+
+        case SINE:
+            generate( id.period_length, sinf );
+            break;
+            
+        case TRIANGLE:
+            generate( id.period_length, triangle );
+            break;
+            
+        case SAW:
+            generate( id.period_length, saw );
+            break;
+            
+        case SQUARE:
+            generate( id.period_length, square );
+            break;
+            
+        default:
+            A(0);
+            break;
+    }
+}
+
+soundBuffer const & AudioOut::Sounds::get(soundId const & id ) {
+    {
+        auto it = sounds.find(id);
+        if( it != sounds.end() ) {
+            return it->second;
+        }
+    }
+    auto it = sounds.emplace(id, id);
+    A(it.second);
+    return it.first->second;
+}
 
 InternalResult AlgoMax::computeWhileLocked(float &f)
 {

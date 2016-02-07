@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <queue>
 
 #include "os.log.h"
 
@@ -272,17 +273,50 @@ namespace imajuscule {
             
             paTestData data;
         };
-        
+
+        inline int freq_to_int_period( float freq_hz ) {
+            return (int) (((float)SAMPLE_RATE) / freq_hz);
+        }
+        enum Sound { SINE, TRIANGLE, SAW, SQUARE, NOISE };
+        struct soundId {
+            soundId( Sound type, float freq_hz ) : type(type), period_length( freq_to_int_period( freq_hz ) ) {
+                A( period_length >= 2 );
+            }
+            Sound type;
+            int period_length;
+            bool operator < (const soundId & other) const {
+                if(type == other.type) {
+                    return ( period_length < other.period_length );
+                }
+                return( type < other.type );
+            }
+        };
+
+        struct soundBuffer {
+            std::vector<float> values;
+            soundBuffer( soundId const & );
+        private:
+            template < typename F >
+            void generate( int period, F );
+        };
+
         struct outputData {
         private:
 
-            int nSamplesToWrite = 0;
+            int remaining_samples_count = 0;
+            int next_sample_index = 0;
+            soundBuffer const * playing_sound = nullptr;
         public:
             void step(SAMPLE * outputBuffer, unsigned long framesPerBuffer);
             
             std::atomic_bool used { false };
 
-            int sound_duration = 0;
+            struct Request {
+                Request( soundBuffer const & s, int samples_count ) : sound(s), samples_count(samples_count) {}
+                soundBuffer const & sound;
+                int samples_count;
+            };
+            std::queue<Request> requests;
         };
         
         class AudioOut {
@@ -294,8 +328,14 @@ namespace imajuscule {
             bool bInitialized = false;
             outputData data;
             
+        private:
+            
+            class Sounds {
+                std::map< soundId, soundBuffer > sounds;
+            public:
+                soundBuffer const & get( soundId const & );
+            } sounds;
         public:
-            enum Sound { NONE, SINE, TRIANGLE, NOISE };
             void play( Sound sound, float freq_hz, float duration_ms  );
         };
         
