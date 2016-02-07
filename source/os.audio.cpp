@@ -159,12 +159,12 @@ void paTestData::step(const SAMPLE *rptr, unsigned long framesPerBuffer)
 }
 
 
-Audio::~Audio() {}
-Audio * Audio::gInstance = NULL;
-Audio& Audio::getInstance()
+AudioIn::~AudioIn() {}
+AudioIn * AudioIn::gInstance = NULL;
+AudioIn& AudioIn::getInstance()
 {
     if(!gInstance)
-        gInstance = new Audio();
+        gInstance = new AudioIn();
     return *gInstance;
 }
 
@@ -312,11 +312,11 @@ OSStatus stopProcessingAudio(AudioUnit audioUnit) {
 
 #endif
 
-void Audio::Init()
+void AudioIn::Init()
 {
     if(bInitialized_)
     {
-        LG(WARN, "Audio::Init already initialized");
+        LG(WARN, "AudioIn::Init already initialized");
         return;
     }
     
@@ -333,7 +333,7 @@ void Audio::Init()
     int erri = setenv( lat, latVal, true);
     if(unlikely(erri))
     {
-        LG(ERR, "Audio::get : Could not set env variable PA_MIN_LATENCY_MSEC: %d", errno);
+        LG(ERR, "AudioIn::get : Could not set env variable PA_MIN_LATENCY_MSEC: %d", errno);
         A(0);
     }
     
@@ -361,8 +361,8 @@ void Audio::Init()
     bInitialized_ = true;
 }
 
-bool Audio::do_wakeup() {
-    LG(INFO, "Audio::do_wakeup : Audio will wake up");
+bool AudioIn::do_wakeup() {
+    LG(INFO, "AudioIn::do_wakeup : AudioIn will wake up");
 #if TARGET_OS_IOS
     if(0==initAudioSession())
     {
@@ -372,54 +372,54 @@ bool Audio::do_wakeup() {
             res = startAudioUnit(audioUnit);
             if( noErr != res )
             {
-                LG(ERR, "Audio::do_wakeup : startAudioUnit failed : %d", res);
+                LG(ERR, "AudioIn::do_wakeup : startAudioUnit failed : %d", res);
                 A(0);
                 return false;
             }
         }
         else
         {
-            LG(ERR, "Audio::do_wakeup : initAudioStreams failed");
+            LG(ERR, "AudioIn::do_wakeup : initAudioStreams failed");
             A(0);
             return false;
         }
     }
     else
     {
-        LG(ERR, "Audio::do_wakeup : initAudioSession failed");
+        LG(ERR, "AudioIn::do_wakeup : initAudioSession failed");
         A(0);
         return false;
     }
 #else
 
-    LG(INFO, "Audio::do_wakeup : initializing %s", Pa_GetVersionText());
+    LG(INFO, "AudioIn::do_wakeup : initializing %s", Pa_GetVersionText());
     PaError err = Pa_Initialize();
     if(likely(err == paNoError))
     {
-        LG(INFO, "Audio::do_wakeup : done initializing %s", Pa_GetVersionText());
+        LG(INFO, "AudioIn::do_wakeup : done initializing %s", Pa_GetVersionText());
         
-        LG(INFO,"Audio::do_wakeup : %d host apis", Pa_GetHostApiCount());
+        LG(INFO,"AudioIn::do_wakeup : %d host apis", Pa_GetHostApiCount());
         
         PaStreamParameters inputParameters;
         inputParameters.device = Pa_GetDefaultInputDevice(); /* default input device */
         if (unlikely(inputParameters.device == paNoDevice)) {
-            LG(ERR, "Audio::do_wakeup : No default input device");
+            LG(ERR, "AudioIn::do_wakeup : No default input device");
             A(0);
             return false;
         }
-        LG(INFO, "Audio::do_wakeup : audio device : id %d", inputParameters.device);
+        LG(INFO, "AudioIn::do_wakeup : audio device : id %d", inputParameters.device);
         
         inputParameters.channelCount = NUM_CHANNELS;
         inputParameters.sampleFormat = PA_SAMPLE_TYPE;
         
         auto pi = Pa_GetDeviceInfo( inputParameters.device );
-        LG(INFO, "Audio::do_wakeup : audio device : hostApi    %d", pi->hostApi);
-        LG(INFO, "Audio::do_wakeup : audio device : name       %s", pi->name);
-        LG(INFO, "Audio::do_wakeup : audio device : maxIC      %d", pi->maxInputChannels);
-        LG(INFO, "Audio::do_wakeup : audio device : maxOC      %d", pi->maxOutputChannels);
-        LG(INFO, "Audio::do_wakeup : audio device : def. sr    %f", pi->defaultSampleRate);
-        LG(INFO, "Audio::do_wakeup : audio device : def. lilat %f", pi->defaultLowInputLatency);
-        LG(INFO, "Audio::do_wakeup : audio device : def. hilat %f", pi->defaultHighInputLatency);
+        LG(INFO, "AudioIn::do_wakeup : audio device : hostApi    %d", pi->hostApi);
+        LG(INFO, "AudioIn::do_wakeup : audio device : name       %s", pi->name);
+        LG(INFO, "AudioIn::do_wakeup : audio device : maxIC      %d", pi->maxInputChannels);
+        LG(INFO, "AudioIn::do_wakeup : audio device : maxOC      %d", pi->maxOutputChannels);
+        LG(INFO, "AudioIn::do_wakeup : audio device : def. sr    %f", pi->defaultSampleRate);
+        LG(INFO, "AudioIn::do_wakeup : audio device : def. lilat %f", pi->defaultLowInputLatency);
+        LG(INFO, "AudioIn::do_wakeup : audio device : def. hilat %f", pi->defaultHighInputLatency);
 
         inputParameters.suggestedLatency =
             // on windows it's important to not set suggestedLatency too low, else samples are lost (for example only 16 are available per timestep)
@@ -440,45 +440,45 @@ bool Audio::do_wakeup() {
         if( unlikely(err != paNoError) )
         {
             stream = NULL;
-            LG(ERR, "Audio::do_wakeup : Pa_OpenStream failed : %s", Pa_GetErrorText(err));
+            LG(ERR, "AudioIn::do_wakeup : Pa_OpenStream failed : %s", Pa_GetErrorText(err));
             A(0);
             return false;
         }
         
         const PaStreamInfo * si = Pa_GetStreamInfo(stream);
         
-        LG(INFO, "Audio::do_wakeup : stream : output lat  %f", si->outputLatency);
-        LG(INFO, "Audio::do_wakeup : stream : input lat   %f", si->inputLatency);
-        LG(INFO, "Audio::do_wakeup : stream : sample rate %f", si->sampleRate);
+        LG(INFO, "AudioIn::do_wakeup : stream : output lat  %f", si->outputLatency);
+        LG(INFO, "AudioIn::do_wakeup : stream : input lat   %f", si->inputLatency);
+        LG(INFO, "AudioIn::do_wakeup : stream : sample rate %f", si->sampleRate);
         
         err = Pa_StartStream( stream );
         if( unlikely(err != paNoError) )
         {
-            LG(ERR, "Audio::do_wakeup : Pa_StartStream failed : %s", Pa_GetErrorText(err));
+            LG(ERR, "AudioIn::do_wakeup : Pa_StartStream failed : %s", Pa_GetErrorText(err));
             A(0);
             return false;
         }
     }
     else
     {
-        LG(ERR, "Audio::do_wakeup : PA_Initialize failed : %s", Pa_GetErrorText(err));
+        LG(ERR, "AudioIn::do_wakeup : PA_Initialize failed : %s", Pa_GetErrorText(err));
         A(0);
         return false;
     }
 #endif
 
-    LG(INFO, "Audio::do_wakeup : Audio is woken up");
+    LG(INFO, "AudioIn::do_wakeup : AudioIn is woken up");
     return true;
 }
 
-bool Audio::do_sleep() {
-    LG(INFO, "Audio::do_sleep : Audio will sleep");
+bool AudioIn::do_sleep() {
+    LG(INFO, "AudioIn::do_sleep : AudioIn will sleep");
 
 #if TARGET_OS_IOS
     OSStatus err = stopProcessingAudio(audioUnit);
     
     if( noErr != err ) {
-        LG(ERR, "Audio::do_sleep : stopProcessingAudio failed : %d", err);
+        LG(ERR, "AudioIn::do_sleep : stopProcessingAudio failed : %d", err);
         A(0);
         return false;
     }
@@ -487,7 +487,7 @@ bool Audio::do_sleep() {
     {
         PaError err = Pa_CloseStream( stream );
         if( unlikely(err != paNoError) ) {
-            LG(ERR, "Audio::do_sleep : Pa_CloseStream failed : %s", Pa_GetErrorText(err));
+            LG(ERR, "AudioIn::do_sleep : Pa_CloseStream failed : %s", Pa_GetErrorText(err));
             A(0);
             return false;
         }
@@ -496,16 +496,16 @@ bool Audio::do_sleep() {
     PaError err = Pa_Terminate();
     if(unlikely(err != paNoError))
     {
-        LG(ERR, "Audio::do_sleep : PA_Terminate failed : %s", Pa_GetErrorText(err));
+        LG(ERR, "AudioIn::do_sleep : PA_Terminate failed : %s", Pa_GetErrorText(err));
         return false;
     }
 #endif
     
-    LG(INFO, "Audio::do_sleep : Audio sleeping");
+    LG(INFO, "AudioIn::do_sleep : AudioIn sleeping");
     return true;
 }
 
-void Audio::TearDown()
+void AudioIn::TearDown()
 {
     Activator::sleep();
 
@@ -518,7 +518,7 @@ void Audio::TearDown()
     }
     else
     {
-        LG(ERR, "Audio::TearDown : was not initialized");
+        LG(ERR, "AudioIn::TearDown : was not initialized");
     }
 }
 InternalResult AlgoMax::computeWhileLocked(float &f)

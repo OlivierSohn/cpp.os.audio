@@ -251,23 +251,23 @@ namespace imajuscule {
         std::atomic_bool used { false };
     };
     
-    class Audio : public Activator
+    class AudioIn : public Activator
     {
     public:
-        static Audio & getInstance();
+        static AudioIn & getInstance();
         void Init();
         void TearDown();
-        ~Audio();
+        ~AudioIn();
 
     protected:
         bool do_sleep() override;
         bool do_wakeup() override;
     private:
         enum { AUDIO_UNUSED_FRAME_COUNT_FOR_SLEEP = 100 };
-        Audio() : Activator ( AUDIO_UNUSED_FRAME_COUNT_FOR_SLEEP ),
+        AudioIn() : Activator ( AUDIO_UNUSED_FRAME_COUNT_FOR_SLEEP ),
         data( *this ){};
         
-        static Audio * gInstance;
+        static AudioIn * gInstance;
         bool bInitialized_ = false;
         typedef void PaStream; //#include "portaudio.h"
         PaStream *stream = NULL;
