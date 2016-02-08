@@ -2,12 +2,13 @@
 #include "TargetConditionals.h"
 #endif
 
+#define  _USE_MATH_DEFINES
+#include <cmath>
 #include <stdlib.h>
 #include <string.h>
 #include <cerrno>
 #include <algorithm>
 #include <functional>
-#include <cmath>
 #include <map>
 #include <cstdlib>
 
