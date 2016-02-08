@@ -188,11 +188,7 @@ static int playCallback( const void *inputBuffer, void *outputBuffer,
 #endif
 void paTestData::step(const SAMPLE *rptr, unsigned long framesPerBuffer)
 {
-    bool bFalse( false );
-    while (!used.compare_exchange_strong(bFalse, true,
-                                     std::memory_order_acquire,
-                                     std::memory_order_relaxed))
-    {}
+    RAIILock l(used);
     
     if( !activator.onStep() && rptr )
     {
@@ -206,8 +202,6 @@ void paTestData::step(const SAMPLE *rptr, unsigned long framesPerBuffer)
             algo_freq.feed(filtered_value);
         }
     }
-    
-    used.store(false, std::memory_order_release);
 }
 
 
@@ -732,76 +726,120 @@ void Audio::TearDown() {
     audioIn.TearDown();
 }
 
-void AudioOut::play( Sound sound, float freq_hz, float duration_ms  ) {
+int AudioOut::openChannel() {
+    return data.openChannel();
+}
+void AudioOut::closeChannel( int id ) {
+    return data.closeChannel( id );
+}
+
+void AudioOut::play( int channel_id, Sound const & sound, float freq_hz, float duration_ms  ) {
     
     int nSamples = (int)( ((float)SAMPLE_RATE) * 0.001f * duration_ms );
 
     auto const & s = sounds.get( { sound, freq_hz } );
     
-    bool bFalse( false );
-    while (!data.used.compare_exchange_strong(bFalse, true,
-                                         std::memory_order_acquire,
-                                         std::memory_order_relaxed))
-    {}
+    if( sound.zeroOnPeriodBoundaries() ) {
+        const int period_size = (int)s.values.size();
+        
+        const int mod = nSamples % period_size;
+        if(mod) {
+            nSamples += period_size-mod;
+        }
+        A( 0 == nSamples % period_size);
+    }
     
-    data.requests.emplace(s, nSamples);
-    
-    data.used.store(false, std::memory_order_release);
+    data.play( channel_id, s, nSamples );
 }
+
+int outputData::openChannel() {
+    RAIILock l(used);
+    
+    channels.emplace_back();
+    
+    return channels.back().id;
+}
+
+void outputData::closeChannel(int channel_id) {
+    RAIILock l(used);
+    
+    channels.erase(std::remove_if(channels.begin(),
+                                  channels.end(),
+                                  [=](const Channel & elt) { return elt.id == channel_id; } ),
+                   channels.end());
+}
+
+void outputData::play( int channel_id, soundBuffer const & sound, int duration_in_samples ) {
+    RAIILock l(used);
+    
+    bool bFound (false);
+    for( auto & c : channels ) {
+        if( channel_id == c.id ) {
+            c.requests.emplace(sound, duration_in_samples);
+            bFound = true;
+            break;
+        }
+    }
+    
+    A(bFound);
+}
+
+int outputData::Channel::gId = 0;
 
 void outputData::step(SAMPLE *outputBuffer, unsigned long framesPerBuffer) {
     
+    memset(outputBuffer,0,framesPerBuffer*sizeof(SAMPLE));
+
+    RAIILock l(used);
+
+    for( auto & c: channels ) {
+        c.step( outputBuffer, framesPerBuffer );
+    }
+}
+
+void outputData::Channel::step(SAMPLE * outputBuffer, unsigned long framesPerBuffer)
+{
+    playing.consume(requests);
+    
+    playing.write( outputBuffer, framesPerBuffer );
+}
+
+void outputData::Channel::Playing::consume(std::queue<Request> & requests) {
     if( remaining_samples_count <= 0 ) {
         
-        // lock
-        bool bFalse( false );
-        while (!used.compare_exchange_strong(bFalse, true,
-                                             std::memory_order_acquire,
-                                             std::memory_order_relaxed))
-        {}
-
         if (!requests.empty())
         {
             auto & request = requests.front();
             
-            A( request.samples_count > 0 );
+            play(request);
             
-            playing_sound = &request.sound;
-            remaining_samples_count = request.samples_count;
-            next_sample_index = 0;
-
             requests.pop();
         }
-
-        // unlock
-        used.store(false, std::memory_order_release);
     }
+}
+void outputData::Channel::Playing::play(Request & request) {
+    A( request.samples_count > 0 );
     
+    sound = &request.sound;
+    remaining_samples_count = request.samples_count;
+    next_sample_index = 0;
+}
+const float amplitude = 0.1f; // ok to have 10 chanels at max amplitude at the same time
+void outputData::Channel::Playing::write(SAMPLE * outputBuffer, unsigned long framesPerBuffer) {
     auto s = -1;
-    unsigned long i=0;
-    for( ; i<framesPerBuffer; i++ ) {
-        const float amplitude = 0.1f;
-        if( remaining_samples_count > 0 ) {
-            if( s == -1 ) {
-                s = (int) playing_sound->values.size();
-            }
-            if( next_sample_index >= s ) {
-                next_sample_index = 0;
-            }
-
-            *outputBuffer = amplitude * playing_sound->values[next_sample_index];
-            ++outputBuffer;
-            ++next_sample_index;
-            --remaining_samples_count;
-        } else {
-            break;
+    
+    for( unsigned long i=0; i<framesPerBuffer && remaining_samples_count > 0; i++ ) {
+        if( s == -1 ) {
+            s = (int) sound->values.size();
         }
-    }
-
-    // fill the rest with zeros
-    for( ; i<framesPerBuffer; i++ ) {
-        *outputBuffer = 0;
-        outputBuffer++;
+        if( next_sample_index >= s ) {
+            next_sample_index = 0;
+        }
+        
+        *outputBuffer += amplitude * sound->values[next_sample_index];
+        ++outputBuffer;
+        ++next_sample_index;
+        --remaining_samples_count;
     }
 }
 
@@ -872,8 +910,8 @@ void soundBuffer::generate( int period, F f ) {
     A( (int)values.size() == period );
 }
 soundBuffer::soundBuffer( soundId const & id ) {
-    switch (id.type) {            
-        case NOISE:
+    switch (id.sound.type) {
+        case Sound::NOISE:
         {
             generate( id.period_length, my_rand );
             if( id.period_length < 20 ) {
@@ -908,19 +946,19 @@ soundBuffer::soundBuffer( soundId const & id ) {
             break;
         }
 
-        case SINE:
+        case Sound::SINE:
             generate( id.period_length, sinf );
             break;
             
-        case TRIANGLE:
+        case Sound::TRIANGLE:
             generate( id.period_length, triangle );
             break;
             
-        case SAW:
+        case Sound::SAW:
             generate( id.period_length, saw );
             break;
             
-        case SQUARE:
+        case Sound::SQUARE:
             generate( id.period_length, square );
             break;
             

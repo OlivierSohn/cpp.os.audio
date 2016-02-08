@@ -277,18 +277,24 @@ namespace imajuscule {
         inline int freq_to_int_period( float freq_hz ) {
             return (int) (((float)SAMPLE_RATE) / freq_hz);
         }
-        enum Sound { SINE, TRIANGLE, SAW, SQUARE, NOISE };
+        struct Sound {
+            bool zeroOnPeriodBoundaries() const { return type == SINE || type == TRIANGLE; }
+            enum Type {SINE, TRIANGLE, SAW, SQUARE, NOISE } type;
+            bool operator == (const Sound & other) const { return type == other.type; }
+            bool operator < (const Sound & other) const { return type < other.type; }
+            Sound(Type t) : type(t) {}
+        };
         struct soundId {
-            soundId( Sound type, float freq_hz ) : type(type), period_length( freq_to_int_period( freq_hz ) ) {
+            soundId( Sound sound, float freq_hz ) : sound(sound), period_length( freq_to_int_period( freq_hz ) ) {
                 A( period_length >= 2 );
             }
-            Sound type;
+            Sound sound;
             int period_length;
             bool operator < (const soundId & other) const {
-                if(type == other.type) {
+                if(sound == other.sound) {
                     return ( period_length < other.period_length );
                 }
-                return( type < other.type );
+                return( sound < other.sound );
             }
         };
 
@@ -300,23 +306,65 @@ namespace imajuscule {
             void generate( int period, F );
         };
 
+        class RAIILock {
+        public:
+            RAIILock( std::atomic_bool & l ) : l(l) {
+                bool bFalse( false );
+                // TODO check the way we use locks, this is different from RAIILock in sensor.h
+
+                while (!l.compare_exchange_strong(bFalse, true,
+                                                  std::memory_order_acquire,
+                                                  std::memory_order_relaxed))
+                {}
+            }
+            ~RAIILock() {
+                l.store(false, std::memory_order_release);
+            }
+        private:
+            std::atomic_bool & l;
+            
+            RAIILock(const RAIILock &) = delete;
+            RAIILock & operator = (const RAIILock &) = delete;
+        };
         struct outputData {
         private:
 
-            int remaining_samples_count = 0;
-            int next_sample_index = 0;
-            soundBuffer const * playing_sound = nullptr;
+            struct Channel {
+                Channel() : id(gId){ ++gId; }
+                void step(SAMPLE * outputBuffer, unsigned long framesPerBuffer);
+
+                struct Request {
+                    Request( soundBuffer const & s, int samples_count ) : sound(s), samples_count(samples_count) {}
+                    soundBuffer const & sound;
+                    int samples_count;
+                };
+                struct Playing {
+                    int remaining_samples_count = 0;
+                    int next_sample_index = 0;
+                    soundBuffer const * sound = nullptr;
+                    
+                    void consume( std::queue<Request> & );
+                    void write(SAMPLE * outputBuffer, unsigned long framesPerBuffer);
+                private:
+                    void play(Request &);
+                } playing;
+                
+                std::queue<Request> requests;
+                int id;
+                static int gId;
+            };
+
+            std::vector<Channel> channels;
+            std::atomic_bool used { false }; // maybe we need two level of locks, one here for the vector and many inside for the elements
+
         public:
+            // called from audio callback
             void step(SAMPLE * outputBuffer, unsigned long framesPerBuffer);
             
-            std::atomic_bool used { false };
-
-            struct Request {
-                Request( soundBuffer const & s, int samples_count ) : sound(s), samples_count(samples_count) {}
-                soundBuffer const & sound;
-                int samples_count;
-            };
-            std::queue<Request> requests;
+            // called from main thread
+            int openChannel();
+            void play( int channel_id, soundBuffer const & sound, int duration_in_samples );
+            void closeChannel(int channel_id);
         };
         
         class AudioOut {
@@ -336,7 +384,9 @@ namespace imajuscule {
                 soundBuffer const & get( soundId const & );
             } sounds;
         public:
-            void play( Sound sound, float freq_hz, float duration_ms  );
+            int openChannel();
+            void play( int channel_id, Sound const & sound, float freq_hz, float duration_ms );
+            void closeChannel(int channel_id);
         };
         
         class Audio {
