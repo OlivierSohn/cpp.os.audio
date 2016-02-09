@@ -351,12 +351,17 @@ namespace imajuscule {
                     int next_sample_index = 0;
                     soundBuffer const * sound = nullptr;
                     
+                    enum { volume_transition_length = 2000 };
+                    int transition_volume_remaining = 0;
+                    float current_volume = 1.f;
+                    float volume_increments = 0.f;
+    
                     void consume( std::queue<Request> & );
                     void write(SAMPLE * outputBuffer, unsigned long framesPerBuffer);
                 private:
                     void play(Request &);
                 } playing;
-                
+
                 std::queue<Request> requests;
                 int id;
                 static int gId;
@@ -373,6 +378,7 @@ namespace imajuscule {
             int openChannel();
             Channel & editChannel(int id) const;
             void play( int channel_id, std::vector<Request> && );
+            void setVolume( int channel_id, float vol );
             void closeChannel(int channel_id);
         };
         
@@ -391,6 +397,7 @@ namespace imajuscule {
         public:
             int openChannel();
             void play( int channel_id, std::vector<Request> && );
+            void setVolume( int channel_id, float );
             void closeChannel(int channel_id);
             
             Sounds & editSounds() { return sounds; }

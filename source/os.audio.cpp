@@ -144,8 +144,9 @@ OSStatus renderCallback_out(void                        *userData,
     
     for (UInt32 i=0; i<buffers->mNumberBuffers; ++i) {
         memset(buffers->mBuffers[i].mData, 0, buffers->mBuffers[i].mDataByteSize);
+        A(numFrames * sizeof(SInt16) == buffers->mBuffers[i].mDataByteSize);
         for( int j=0; j<buffers->mBuffers[i].mDataByteSize; j++ ) {
-            ((float*)(buffers->mBuffers[i].mData))[j] = (SInt16)(outputBuffer[j] * 32767.f);
+            ((SInt16*)(buffers->mBuffers[i].mData))[j] = (SInt16)(outputBuffer[j] * 32767.f);
         }
     }
     
@@ -307,7 +308,7 @@ int initAudioStreams(AudioUnit & audioUnit, void * pData, AURenderCallback cb) {
     // Not sure if the iPhone supports recording >16-bit audio, but I doubt it.
     streamDescription.mBitsPerChannel = 16;
     // 1 sample per frame, will always be 2 as long as 16-bit samples are being used
-    streamDescription.mBytesPerFrame = 2;
+    streamDescription.mBytesPerFrame = sizeof(SInt16);
     // Record in mono. Use 2 for stereo, though I don't think the iPhone does true stereo recording
     streamDescription.mChannelsPerFrame = 1;
     streamDescription.mBytesPerPacket = streamDescription.mBytesPerFrame *
@@ -738,6 +739,10 @@ void AudioOut::play( int channel_id, std::vector<Request> && v ) {
     data.play( channel_id, std::move( v ) );
 }
 
+void AudioOut::setVolume( int channel_id, float v ) {
+    data.setVolume( channel_id, v);
+}
+
 Request::Request( Sounds & sounds, Sound const & sound, float freq_hz, float duration_ms ) {
     duration_in_samples = (int)( ((float)SAMPLE_RATE) * 0.001f * duration_ms );
     
@@ -786,6 +791,19 @@ void outputData::play( int channel_id, std::vector<Request> && v ) {
         }
     }
     
+    A(bFound);
+}
+
+void outputData::setVolume(int channel_id, float vol) {
+    bool bFound (false);
+    for( auto & c : channels ) {
+        if( channel_id == c.id ) {
+            c.playing.transition_volume_remaining = Channel::Playing::volume_transition_length;
+            c.playing.volume_increments = (vol - c.playing.current_volume) / (float) Channel::Playing::volume_transition_length;
+            bFound = true;
+            break;
+        }
+    }
     A(bFound);
 }
 
@@ -841,7 +859,11 @@ void outputData::Channel::Playing::write(SAMPLE * outputBuffer, unsigned long fr
             next_sample_index = 0;
         }
         
-        *outputBuffer += amplitude * sound->values[next_sample_index];
+        if( transition_volume_remaining ) {
+            transition_volume_remaining--;
+            current_volume += volume_increments;
+        }
+        *outputBuffer += amplitude * current_volume * sound->values[next_sample_index];
         ++outputBuffer;
         ++next_sample_index;
         --remaining_samples_count;
