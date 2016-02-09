@@ -734,23 +734,25 @@ void AudioOut::closeChannel( int id ) {
     return data.closeChannel( id );
 }
 
-void AudioOut::play( int channel_id, Sound const & sound, float freq_hz, float duration_ms  ) {
-    
-    int nSamples = (int)( ((float)SAMPLE_RATE) * 0.001f * duration_ms );
+void AudioOut::play( int channel_id, std::vector<Request> && v ) {
+    data.play( channel_id, std::move( v ) );
+}
 
-    auto const & s = sounds.get( { sound, freq_hz } );
+Request::Request( Sounds & sounds, Sound const & sound, float freq_hz, float duration_ms ) {
+    duration_in_samples = (int)( ((float)SAMPLE_RATE) * 0.001f * duration_ms );
+    
+    buffer = &sounds.get( { sound, freq_hz } );
+    A(buffer);
     
     if( sound.zeroOnPeriodBoundaries() ) {
-        const int period_size = (int)s.values.size();
+        const int period_size = (int)buffer->values.size();
         
-        const int mod = nSamples % period_size;
+        const int mod = duration_in_samples % period_size;
         if(mod) {
-            nSamples += period_size-mod;
+            duration_in_samples += period_size-mod;
         }
-        A( 0 == nSamples % period_size);
+        A( 0 == duration_in_samples % period_size);
     }
-    
-    data.play( channel_id, s, nSamples );
 }
 
 int outputData::openChannel() {
@@ -770,13 +772,15 @@ void outputData::closeChannel(int channel_id) {
                    channels.end());
 }
 
-void outputData::play( int channel_id, soundBuffer const & sound, int duration_in_samples ) {
+void outputData::play( int channel_id, std::vector<Request> && v ) {
     RAIILock l(used);
     
     bool bFound (false);
     for( auto & c : channels ) {
         if( channel_id == c.id ) {
-            c.requests.emplace(sound, duration_in_samples);
+            for( auto & sound : v ) {
+                c.requests.emplace( std::move(sound) );
+            }
             bFound = true;
             break;
         }
@@ -819,10 +823,10 @@ void outputData::Channel::Playing::consume(std::queue<Request> & requests) {
     }
 }
 void outputData::Channel::Playing::play(Request & request) {
-    A( request.samples_count > 0 );
+    A( request.duration_in_samples > 0 );
     
-    sound = &request.sound;
-    remaining_samples_count = request.samples_count;
+    sound = request.buffer;
+    remaining_samples_count = request.duration_in_samples;
     next_sample_index = 0;
 }
 const float amplitude = 0.1f; // ok to have 10 chanels at max amplitude at the same time
@@ -969,7 +973,7 @@ soundBuffer::soundBuffer( soundId const & id ) {
     }
 }
 
-soundBuffer const & AudioOut::Sounds::get(soundId const & id ) {
+soundBuffer const & Sounds::get(soundId const & id ) {
     {
         auto it = sounds.find(id);
         if( it != sounds.end() ) {

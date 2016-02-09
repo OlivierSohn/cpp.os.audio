@@ -306,6 +306,19 @@ namespace imajuscule {
             void generate( int period, F );
         };
 
+        class Sounds {
+            std::map< soundId, soundBuffer > sounds;
+        public:
+            soundBuffer const & get( soundId const & );
+        };
+
+        struct Request {
+            Request( Sounds & sounds, Sound const & sound, float freq_hz, float duration_ms );
+            
+            soundBuffer const * buffer;
+            int duration_in_samples;
+        };
+
         class RAIILock {
         public:
             RAIILock( std::atomic_bool & l ) : l(l) {
@@ -333,11 +346,6 @@ namespace imajuscule {
                 Channel() : id(gId){ ++gId; }
                 void step(SAMPLE * outputBuffer, unsigned long framesPerBuffer);
 
-                struct Request {
-                    Request( soundBuffer const & s, int samples_count ) : sound(s), samples_count(samples_count) {}
-                    soundBuffer const & sound;
-                    int samples_count;
-                };
                 struct Playing {
                     int remaining_samples_count = 0;
                     int next_sample_index = 0;
@@ -363,7 +371,8 @@ namespace imajuscule {
             
             // called from main thread
             int openChannel();
-            void play( int channel_id, soundBuffer const & sound, int duration_in_samples );
+            Channel & editChannel(int id) const;
+            void play( int channel_id, std::vector<Request> && );
             void closeChannel(int channel_id);
         };
         
@@ -378,15 +387,13 @@ namespace imajuscule {
             
         private:
             
-            class Sounds {
-                std::map< soundId, soundBuffer > sounds;
-            public:
-                soundBuffer const & get( soundId const & );
-            } sounds;
+            Sounds sounds;
         public:
             int openChannel();
-            void play( int channel_id, Sound const & sound, float freq_hz, float duration_ms );
+            void play( int channel_id, std::vector<Request> && );
             void closeChannel(int channel_id);
+            
+            Sounds & editSounds() { return sounds; }
         };
         
         class Audio {
