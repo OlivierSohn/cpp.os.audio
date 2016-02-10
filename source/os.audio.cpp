@@ -60,7 +60,6 @@ const int NUM_CHANNELS(1);
 #if TARGET_OS_IOS
 AudioUnit audioUnit_in = NULL;
 AudioUnit audioUnit_out = NULL;
-std::vector<float> convertedSampleBuffer, outputBuffer;
 OSStatus renderCallback_in(void                        *userData,
                            AudioUnitRenderActionFlags  *actionFlags,
                            const AudioTimeStamp        *audioTimeStamp,
@@ -80,8 +79,10 @@ OSStatus renderCallback_in(void                        *userData,
         return status;
     }
     
-    convertedSampleBuffer.resize(numFrames);
-    float * buf = convertedSampleBuffer.data();
+    paTestData *data = (paTestData*)userData;
+
+    data->convertedSampleBuffer.resize(numFrames);
+    float * buf = data->convertedSampleBuffer.data();
     
     SInt16 *inputFrames = (SInt16*)(buffers->mBuffers->mData);
     
@@ -92,8 +93,6 @@ OSStatus renderCallback_in(void                        *userData,
     for(auto i = 0; i < numFrames; i++) {
         buf[i] = (float)inputFrames[i] / 32768.f;
     }
-    
-    paTestData *data = (paTestData*)userData;
     
     data->step((const SAMPLE*)buf, numFrames);
 
@@ -119,11 +118,11 @@ OSStatus renderCallback_in(void                        *userData,
     return noErr;
 }
 OSStatus renderCallback_out(void                        *userData,
-                        AudioUnitRenderActionFlags  *actionFlags,
-                        const AudioTimeStamp        *audioTimeStamp,
-                        UInt32                      busNumber,
-                        UInt32                      numFrames,
-                        AudioBufferList             *buffers) {
+                            AudioUnitRenderActionFlags  *actionFlags,
+                            const AudioTimeStamp        *audioTimeStamp,
+                            UInt32                      busNumber,
+                            UInt32                      numFrames,
+                            AudioBufferList             *buffers) {
     
     OSStatus status = AudioUnitRender(audioUnit_out,
                                       actionFlags,
@@ -138,15 +137,15 @@ OSStatus renderCallback_out(void                        *userData,
     }
     
     outputData *data = (outputData*)userData;
-    outputBuffer.resize(numFrames);
+    data->outputBuffer.resize(numFrames);
     
-    data->step(outputBuffer.data(), numFrames);
+    data->step(data->outputBuffer.data(), numFrames);
     
     for (UInt32 i=0; i<buffers->mNumberBuffers; ++i) {
         memset(buffers->mBuffers[i].mData, 0, buffers->mBuffers[i].mDataByteSize);
         A(numFrames * sizeof(SInt16) == buffers->mBuffers[i].mDataByteSize);
-        for( int j=0; j<buffers->mBuffers[i].mDataByteSize; j++ ) {
-            ((SInt16*)(buffers->mBuffers[i].mData))[j] = (SInt16)(outputBuffer[j] * 32767.f);
+        for( UInt32 j=0; j<buffers->mBuffers[i].mDataByteSize; j++ ) {
+            ((SInt16*)(buffers->mBuffers[i].mData))[j] = (SInt16)(data->outputBuffer[j] * 32767.f);
         }
     }
     
@@ -166,7 +165,7 @@ static int recordCallback( const void *inputBuffer, void *outputBuffer,
     (void) statusFlags;
     (void) userData;
     
-    data->step((const SAMPLE*)inputBuffer, framesPerBuffer);
+    data->step((const SAMPLE*)inputBuffer, (int)framesPerBuffer);
     
     return paContinue;
 }
@@ -183,18 +182,18 @@ static int playCallback( const void *inputBuffer, void *outputBuffer,
     (void) statusFlags;
     (void) userData;
     
-    data->step((SAMPLE*)outputBuffer, framesPerBuffer);
+    data->step((SAMPLE*)outputBuffer, (int)framesPerBuffer);
     
     return paContinue;
 }
 #endif
-void paTestData::step(const SAMPLE *rptr, unsigned long framesPerBuffer)
+void paTestData::step(const SAMPLE *rptr, int framesPerBuffer)
 {
     RAIILock l(used);
     
     if( !activator.onStep() && rptr )
     {
-        for( unsigned long i=0; i<framesPerBuffer; i++ )
+        for( int i=0; i<framesPerBuffer; i++ )
         {
             auto val = *rptr++;
             algo_max.feed(val);
@@ -760,6 +759,23 @@ Request::Request( Sounds & sounds, Sound const & sound, float freq_hz, float dur
     }
 }
 
+outputData::DelayLine::DelayLine(int size, float attenuation): delay(size,0.f), it(0), end(size), attenuation(attenuation) {}
+
+void outputData::DelayLine::step(SAMPLE *outputBuffer, int framesPerBuffer) {
+    for( int i=0; i < framesPerBuffer; i++ ) {
+        auto & d = delay[it];
+        auto delayed = d;
+        d = outputBuffer[i];
+        outputBuffer[i] += attenuation * delayed;
+        ++it;
+        if( unlikely(it == end) ) {
+            it = 0;
+        }
+    }
+}
+outputData::outputData() : delays{{1000, 0.6f},{4000, 0.2f}, {4300, 0.3f}, {5000, 0.1f}} {
+}
+
 int outputData::openChannel() {
     RAIILock l(used);
     
@@ -809,18 +825,26 @@ void outputData::setVolume(int channel_id, float vol) {
 
 int outputData::Channel::gId = 0;
 
-void outputData::step(SAMPLE *outputBuffer, unsigned long framesPerBuffer) {
+void outputData::step(SAMPLE *outputBuffer, int framesPerBuffer) {
     
     memset(outputBuffer,0,framesPerBuffer*sizeof(SAMPLE));
 
-    RAIILock l(used);
+    {
+        RAIILock l(used);
+        
+        for( auto & c: channels ) {
+            c.step( outputBuffer, framesPerBuffer );
+        }
+    }
+    
+    // apply the effect
 
-    for( auto & c: channels ) {
-        c.step( outputBuffer, framesPerBuffer );
+    for( auto & delay : delays ) {
+        delay.step(outputBuffer, framesPerBuffer);
     }
 }
 
-void outputData::Channel::step(SAMPLE * outputBuffer, unsigned long framesPerBuffer)
+void outputData::Channel::step(SAMPLE * outputBuffer, int framesPerBuffer)
 {
     playing.consume(requests);
     
@@ -848,10 +872,10 @@ void outputData::Channel::Playing::play(Request & request) {
     next_sample_index = 0;
 }
 const float amplitude = 0.1f; // ok to have 10 chanels at max amplitude at the same time
-void outputData::Channel::Playing::write(SAMPLE * outputBuffer, unsigned long framesPerBuffer) {
+void outputData::Channel::Playing::write(SAMPLE * outputBuffer, int framesPerBuffer) {
     auto s = -1;
     
-    for( unsigned long i=0; i<framesPerBuffer && remaining_samples_count > 0; i++ ) {
+    for( int i=0; i<framesPerBuffer && remaining_samples_count > 0; i++ ) {
         if( s == -1 ) {
             s = (int) sound->values.size();
         }

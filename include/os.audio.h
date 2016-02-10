@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef __APPLE__
+#include "TargetConditionals.h"
+#endif
+
 #include <atomic>
 #include <queue>
 
@@ -236,7 +240,7 @@ namespace imajuscule {
         , activator(a)
         {}
         
-        void step(const SAMPLE * inputBuffer, unsigned long framesPerBuffer);
+        void step(const SAMPLE * inputBuffer, int framesPerBuffer);
         
         //FreqFromPeaks
         //FreqFromAutocorr
@@ -244,6 +248,10 @@ namespace imajuscule {
             algo_freq;
         
         AlgoMax algo_max;
+        
+#if TARGET_OS_IOS
+        std::vector<float> convertedSampleBuffer;
+#endif
         
     private:
         Activator & activator;
@@ -344,7 +352,7 @@ namespace imajuscule {
 
             struct Channel {
                 Channel() : id(gId){ ++gId; }
-                void step(SAMPLE * outputBuffer, unsigned long framesPerBuffer);
+                void step(SAMPLE * outputBuffer, int framesPerBuffer);
 
                 struct Playing {
                     int remaining_samples_count = 0;
@@ -357,7 +365,7 @@ namespace imajuscule {
                     float volume_increments = 0.f;
     
                     void consume( std::queue<Request> & );
-                    void write(SAMPLE * outputBuffer, unsigned long framesPerBuffer);
+                    void write(SAMPLE * outputBuffer, int framesPerBuffer);
                 private:
                     void play(Request &);
                 } playing;
@@ -371,9 +379,24 @@ namespace imajuscule {
             std::atomic_bool used { false }; // maybe we need two level of locks, one here for the vector and many inside for the elements
 
         public:
-            // called from audio callback
-            void step(SAMPLE * outputBuffer, unsigned long framesPerBuffer);
+            outputData();
             
+            // called from audio callback
+            void step(SAMPLE * outputBuffer, int framesPerBuffer);
+            
+            struct DelayLine {
+                DelayLine(int size, float attenuation);
+                void step(SAMPLE * outputBuffer, int framesPerBuffer);
+                std::vector<float> delay;
+                int it, end;
+                float attenuation;
+            };
+            std::vector< DelayLine > delays;
+            
+#if TARGET_OS_IOS
+            std::vector<float> outputBuffer;
+#endif
+
             // called from main thread
             int openChannel();
             Channel & editChannel(int id) const;
