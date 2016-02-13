@@ -742,7 +742,9 @@ void AudioOut::setVolume( int channel_id, float v ) {
     data.setVolume( channel_id, v);
 }
 
-Request::Request( Sounds & sounds, Sound const & sound, float freq_hz, float duration_ms ) {
+Request::Request( Sounds & sounds, Sound const & sound, float freq_hz, float volume, float duration_ms ) :
+volume(volume)
+{
     duration_in_samples = (int)( ((float)SAMPLE_RATE) * 0.001f * duration_ms );
     
     buffer = &sounds.get( { sound, freq_hz } );
@@ -815,7 +817,7 @@ void outputData::setVolume(int channel_id, float vol) {
     for( auto & c : channels ) {
         if( channel_id == c.id ) {
             c.playing.transition_volume_remaining = Channel::Playing::volume_transition_length;
-            c.playing.volume_increments = (vol - c.playing.current_volume) / (float) Channel::Playing::volume_transition_length;
+            c.playing.channel_volume_increments = (vol - c.playing.channel_volume) / (float) Channel::Playing::volume_transition_length;
             bFound = true;
             break;
         }
@@ -868,12 +870,15 @@ void outputData::Channel::Playing::play(Request & request) {
     A( request.duration_in_samples > 0 );
     
     sound = request.buffer;
+    sound_volume = request.volume;
     remaining_samples_count = request.duration_in_samples;
     next_sample_index = 0;
 }
 const float amplitude = 0.1f; // ok to have 10 chanels at max amplitude at the same time
 void outputData::Channel::Playing::write(SAMPLE * outputBuffer, int framesPerBuffer) {
     auto s = -1;
+    
+    auto a = amplitude * sound_volume;
     
     for( int i=0; i<framesPerBuffer && remaining_samples_count > 0; i++ ) {
         if( s == -1 ) {
@@ -885,9 +890,9 @@ void outputData::Channel::Playing::write(SAMPLE * outputBuffer, int framesPerBuf
         
         if( transition_volume_remaining ) {
             transition_volume_remaining--;
-            current_volume += volume_increments;
+            channel_volume += channel_volume_increments;
         }
-        *outputBuffer += amplitude * current_volume * sound->values[next_sample_index];
+        *outputBuffer += a * channel_volume * sound->values[next_sample_index];
         ++outputBuffer;
         ++next_sample_index;
         --remaining_samples_count;

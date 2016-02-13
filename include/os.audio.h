@@ -321,9 +321,10 @@ namespace imajuscule {
         };
 
         struct Request {
-            Request( Sounds & sounds, Sound const & sound, float freq_hz, float duration_ms );
+            Request( Sounds & sounds, Sound const & sound, float freq_hz, float volume, float duration_ms );
             
             soundBuffer const * buffer;
+            float volume;
             int duration_in_samples;
         };
 
@@ -358,11 +359,12 @@ namespace imajuscule {
                     int remaining_samples_count = 0;
                     int next_sample_index = 0;
                     soundBuffer const * sound = nullptr;
+                    float sound_volume = 0.f;
                     
                     enum { volume_transition_length = 2000 };
                     int transition_volume_remaining = 0;
-                    float current_volume = 1.f;
-                    float volume_increments = 0.f;
+                    float channel_volume = 1.f;
+                    float channel_volume_increments = 0.f;
     
                     void consume( std::queue<Request> & );
                     void write(SAMPLE * outputBuffer, int framesPerBuffer);
