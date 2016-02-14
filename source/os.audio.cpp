@@ -394,7 +394,6 @@ void Audio::Init() {
 #endif
     
     audioIn.Init();
-    audioOut.Init();
 }
 void AudioIn::Init()
 {
@@ -524,6 +523,9 @@ bool AudioIn::do_wakeup() {
 }
 
 void AudioOut::Init() {
+    if(bInitialized) {
+        return;
+    }
     LG(INFO, "AudioOut::Init");
 #if TARGET_OS_IOS
     bInitialized = true;
@@ -728,10 +730,13 @@ void Audio::TearDown() {
 }
 
 int AudioOut::openChannel() {
+    Init();
     return data.openChannel();
 }
 void AudioOut::closeChannel( int id ) {
-    return data.closeChannel( id );
+    if( data.closeChannel( id ) ) {
+        TearDown();
+    }
 }
 
 void AudioOut::play( int channel_id, std::vector<Request> && v ) {
@@ -786,13 +791,15 @@ int outputData::openChannel() {
     return channels.back().id;
 }
 
-void outputData::closeChannel(int channel_id) {
+bool outputData::closeChannel(int channel_id) {
     RAIILock l(used);
     
     channels.erase(std::remove_if(channels.begin(),
                                   channels.end(),
                                   [=](const Channel & elt) { return elt.id == channel_id; } ),
                    channels.end());
+    
+    return channels.empty();
 }
 
 void outputData::play( int channel_id, std::vector<Request> && v ) {
@@ -943,7 +950,7 @@ static float square( float angle_radians ) {
 }
 
 static float my_rand(float) {
-    float between_zero_one = (float)rand()/(float)(RAND_MAX);
+    float between_zero_one = ((float)rand())/(float)(RAND_MAX);
     return (between_zero_one * 2.f) - 1.f;
 }
 

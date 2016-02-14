@@ -404,7 +404,7 @@ namespace imajuscule {
             Channel & editChannel(int id) const;
             void play( int channel_id, std::vector<Request> && );
             void setVolume( int channel_id, float vol );
-            void closeChannel(int channel_id);
+            bool closeChannel(int channel_id);
         };
         
         class AudioOut {
