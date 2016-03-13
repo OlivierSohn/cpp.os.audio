@@ -255,7 +255,7 @@ namespace imajuscule {
         
     private:
         Activator & activator;
-        slidingAverage avg;
+        slidingAverage<float> avg;
 
         std::atomic_bool used { false };
     };
