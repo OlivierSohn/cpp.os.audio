@@ -199,7 +199,8 @@ void paTestData::step(const SAMPLE *rptr, int framesPerBuffer)
             algo_max.feed(val);
             
             // filter high frequencies
-            auto filtered_value = avg.feed(val);
+            avg.feed(val);
+            auto filtered_value = avg.compute();
             algo_freq.feed(filtered_value);
         }
     }
