@@ -7,8 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		09610DE91BC4D77E0032A599 /* os.audio.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 09E7B1301BB5CA01007BAA5F /* os.audio.cpp */; };
-		09E7B1311BB5CA01007BAA5F /* os.audio.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 09E7B1301BB5CA01007BAA5F /* os.audio.cpp */; };
+		097835671D57B0EA00E47ED3 /* unity.build.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 097835661D57B0EA00E47ED3 /* unity.build.cpp */; };
+		097835681D57B0EA00E47ED3 /* unity.build.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 097835661D57B0EA00E47ED3 /* unity.build.cpp */; };
 		09E7B1341BB5CA29007BAA5F /* os.audio.h in Headers */ = {isa = PBXBuildFile; fileRef = 09E7B1331BB5CA29007BAA5F /* os.audio.h */; };
 /* End PBXBuildFile section */
 
@@ -25,6 +25,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		097835661D57B0EA00E47ED3 /* unity.build.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = unity.build.cpp; path = source/unity.build.cpp; sourceTree = "<group>"; };
 		09C84A441C271D95002CF5B7 /* osx.debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = osx.debug.xcconfig; sourceTree = "<group>"; };
 		09C84A451C271D95002CF5B7 /* ios.debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = ios.debug.xcconfig; sourceTree = "<group>"; };
 		09C84A461C271D95002CF5B7 /* ios.release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = ios.release.xcconfig; sourceTree = "<group>"; };
@@ -96,6 +97,7 @@
 		09E7B1321BB5CA0E007BAA5F /* source */ = {
 			isa = PBXGroup;
 			children = (
+				097835661D57B0EA00E47ED3 /* unity.build.cpp */,
 				09E7B1301BB5CA01007BAA5F /* os.audio.cpp */,
 			);
 			name = source;
@@ -198,7 +200,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				09E7B1311BB5CA01007BAA5F /* os.audio.cpp in Sources */,
+				097835671D57B0EA00E47ED3 /* unity.build.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -206,7 +208,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				09610DE91BC4D77E0032A599 /* os.audio.cpp in Sources */,
+				097835681D57B0EA00E47ED3 /* unity.build.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
