@@ -23,6 +23,8 @@
 // fft method is not easy to implement, i prefered zero crossing instead but i leave it here just in case
 //#include "kiss_fftr.h"
 
+#include "globals.h"
+
 #include "os.log.h"
 
 #include "os.audio.h"
@@ -208,13 +210,23 @@ void paTestData::step(const SAMPLE *rptr, int framesPerBuffer)
 
 
 Audio * Audio::gInstance = NULL;
-Audio& Audio::getInstance()
+Audio * Audio::getInstance()
 {
-    if(!gInstance)
-        gInstance = new Audio();
-    return *gInstance;
+    return Globals::ptr<Audio>(gInstance);
 }
 
+
+void Audio::Init() {
+    if(auto i = Audio::getInstance()) {
+        i->doInit();
+    }
+}
+
+void Audio::TearDown() {
+    if(auto i = Audio::getInstance()) {
+        i->doTearDown();
+    }
+}
 
 #if TARGET_OS_IOS
 int initAudioSession() {
@@ -359,7 +371,7 @@ OSStatus stopProcessingAudio(AudioUnit audioUnit) {
 
 #endif
 
-void Audio::Init() {
+void Audio::doInit() {
 
 #if TARGET_OS_IOS
 #else
@@ -725,7 +737,7 @@ void AudioIn::TearDown()
     }
 }
 
-void Audio::TearDown() {
+void Audio::doTearDown() {
     audioOut.TearDown();
     audioIn.TearDown();
 }

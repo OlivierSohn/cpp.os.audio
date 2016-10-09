@@ -430,18 +430,23 @@ namespace imajuscule {
         };
         
         class Audio {
+            friend class imajuscule::Globals;
         public:
-            void Init();
-            void TearDown();
-            static Audio & getInstance();
+            static void Init();
+            static void TearDown();
+            static Audio * getInstance();
             
             AudioOut & out() { return audioOut; }
 
         private:
-            Audio(){};
+            Audio() = default;
+            ~Audio() = default;
             static Audio * gInstance;
             AudioIn audioIn;
             AudioOut audioOut;
+
+            void doInit();
+            void doTearDown();
         };
     }
 }

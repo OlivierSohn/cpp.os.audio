@@ -10,4 +10,4 @@
 
 // usr/local/include is for portaudio
 
-HEADER_SEARCH_PATHS = $(PROJECT__HEADER_SEARCH_PATHS) "$(PROJECT_DIR)/../os.log/include" "$(PROJECT_DIR)/include" "$(PROJECT_DIR)/../cg.math/include" "$(PROJECT_DIR)/../model/include" "$(PROJECT_DIR)/../tp.kissfft/include" /usr/local/include
+HEADER_SEARCH_PATHS = $(PROJECT__HEADER_SEARCH_PATHS) "$(PROJECT_DIR)/../os.log/include" "$(PROJECT_DIR)/include" "$(PROJECT_DIR)/../cg.math/include" "$(PROJECT_DIR)/../model/include" "$(PROJECT_DIR)/../os.storage/include" "$(PROJECT_DIR)/../tp.kissfft/include" /usr/local/include
