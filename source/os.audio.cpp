@@ -38,7 +38,7 @@ int setenv(const char *name, const char *value, int overwrite)
     int errcode = 0;
     if ( !overwrite ) {
         size_t envsize = 0;
-        errcode = getenv_s(&envsize, NULL, 0, name);
+        errcode = getenv_s(&envsize, nullptr, 0, name);
         if ( errcode || envsize ) return errcode;
     }
     return _putenv_s(name, value);
@@ -60,8 +60,8 @@ const int NUM_CHANNELS(1);
  ** that could mess up the system like calling malloc() or free().
  */
 #if TARGET_OS_IOS
-AudioUnit audioUnit_in = NULL;
-AudioUnit audioUnit_out = NULL;
+AudioUnit audioUnit_in = nullptr;
+AudioUnit audioUnit_out = nullptr;
 OSStatus renderCallback_in(void                        *userData,
                            AudioUnitRenderActionFlags  *actionFlags,
                            const AudioTimeStamp        *audioTimeStamp,
@@ -100,7 +100,7 @@ OSStatus renderCallback_in(void                        *userData,
 
     // Now we have floating point sample data from the render callback! We
     // can send it along for further processing, for example:
-    // plugin->processReplacing(convertedSampleBuffer, NULL, sampleFrames);
+    // plugin->processReplacing(convertedSampleBuffer, nullptr, sampleFrames);
     
     
     /*
@@ -209,7 +209,7 @@ void paTestData::step(const SAMPLE *rptr, int framesPerBuffer)
 }
 
 
-Audio * Audio::gInstance = NULL;
+Audio * Audio::gInstance = nullptr;
 Audio * Audio::getInstance()
 {
     return Globals::ptr<Audio>(gInstance);
@@ -231,7 +231,7 @@ void Audio::TearDown() {
 #if TARGET_OS_IOS
 int initAudioSession() {
     
-    if(AudioSessionInitialize(NULL, NULL, NULL, NULL) != noErr) {
+    if(AudioSessionInitialize(nullptr, nullptr, nullptr, nullptr) != noErr) {
         return 1;
     }
     
@@ -285,7 +285,7 @@ int initAudioStreams(AudioUnit & audioUnit, void * pData, AURenderCallback cb) {
     componentDescription.componentManufacturer = kAudioUnitManufacturer_Apple;
     componentDescription.componentFlags = 0;
     componentDescription.componentFlagsMask = 0;
-    AudioComponent component = AudioComponentFindNext(NULL, &componentDescription);
+    AudioComponent component = AudioComponentFindNext(nullptr, &componentDescription);
     if(AudioComponentInstanceNew(component, &audioUnit) != noErr) {
         return 1;
     }
@@ -365,7 +365,7 @@ OSStatus stopProcessingAudio(AudioUnit audioUnit) {
         return res;
     }
     
-    audioUnit = NULL;
+    audioUnit = nullptr;
     return noErr;
 }
 
@@ -489,13 +489,13 @@ bool AudioIn::do_wakeup() {
             // on windows it's important to not set suggestedLatency too low, else samples are lost (for example only 16 are available per timestep)
         pi->defaultLowInputLatency;
 
-        inputParameters.hostApiSpecificStreamInfo = NULL;
+        inputParameters.hostApiSpecificStreamInfo = nullptr;
         
         /* Record some audio. -------------------------------------------- */
         PaError err = Pa_OpenStream(
                             &stream,
                             &inputParameters,
-                            NULL,                  /* &outputParameters, */
+                            nullptr,                  /* &outputParameters, */
                             SAMPLE_RATE,
                             0 /*if not 0 an additional buffering may be used for some host apis, increasing latency*/,
                             paClipOff,      /* we won't output out of range samples so don't bother clipping them */
@@ -503,7 +503,7 @@ bool AudioIn::do_wakeup() {
                             &data);
         if( unlikely(err != paNoError) )
         {
-            stream = NULL;
+            stream = nullptr;
             LG(ERR, "AudioIn::do_wakeup : Pa_OpenStream failed : %s", Pa_GetErrorText(err));
             A(0);
             return false;
@@ -604,7 +604,7 @@ void AudioOut::Init() {
         // on windows it's important to not set suggestedLatency too low, else samples are lost (for example only 16 are available per timestep)
         pi->defaultLowInputLatency;
         
-        p.hostApiSpecificStreamInfo = NULL;
+        p.hostApiSpecificStreamInfo = nullptr;
         
         /* Record some audio. -------------------------------------------- */
         PaError err = Pa_OpenStream(
@@ -618,7 +618,7 @@ void AudioOut::Init() {
                                     &data);
         if( unlikely(err != paNoError) )
         {
-            stream = NULL;
+            stream = nullptr;
             LG(ERR, "AudioOut::Init : Pa_OpenStream failed : %s", Pa_GetErrorText(err));
             A(0);
             return;
@@ -1166,7 +1166,7 @@ auto FreqFromAutocorr::computeFrequency(float & f) -> Result
     {
         if(!cfg)
         {
-            cfg = kiss_fftr_alloc(bufferWithPaddingLength, 0, NULL, NULL);
+            cfg = kiss_fftr_alloc(bufferWithPaddingLength, 0, nullptr, nullptr);
         }
         
         if(cfg)
@@ -1200,7 +1200,7 @@ auto FreqFromAutocorr::computeFrequency(float & f) -> Result
     {
         if(!cfg2)
         {
-            cfg2 = kiss_fftr_alloc(bufferWithPaddingLength, 1, NULL, NULL);
+            cfg2 = kiss_fftr_alloc(bufferWithPaddingLength, 1, nullptr, nullptr);
         }
         
         if(cfg2)

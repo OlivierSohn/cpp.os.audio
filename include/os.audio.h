@@ -191,8 +191,8 @@ namespace imajuscule {
         }my_kiss_fft_cpx;
         std::vector<my_kiss_fft_cpx> fft1;
         
-        void * cfg = NULL;
-        void * cfg2 = NULL;
+        void * cfg = nullptr;
+        void * cfg2 = nullptr;
         // in the main thread
         float mean() const
         {
@@ -278,7 +278,7 @@ namespace imajuscule {
             data( *this ){};
             
             bool bInitialized_ = false;
-            PaStream *stream = NULL;
+            PaStream *stream = nullptr;
             
             paTestData data;
         };
@@ -413,7 +413,7 @@ namespace imajuscule {
             void Init();
             void TearDown();
 
-            PaStream *stream = NULL;
+            PaStream *stream = nullptr;
             bool bInitialized = false;
             outputData data;
             
