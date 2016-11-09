@@ -1,12 +1,12 @@
 #pragma once
 
-#ifdef __APPLE__
-#include "TargetConditionals.h"
-#endif
-
 #include <atomic>
 #include <queue>
 #include <algorithm>
+
+#ifdef __APPLE__
+#include "TargetConditionals.h"
+#endif
 
 #include "os.log.h"
 
@@ -91,8 +91,9 @@ namespace imajuscule {
         void feed(SAMPLE val)
         {
             counter++;
-            if(counter < sampling_period)
+            if(counter < sampling_period) {
                 return;
+            }
             counter = 0;
             
             // high pass
@@ -286,6 +287,7 @@ namespace imajuscule {
         inline int freq_to_int_period( float freq_hz ) {
             return (int) (((float)SAMPLE_RATE) / freq_hz);
         }
+        
         struct Sound {
             bool zeroOnPeriodBoundaries() const { return type == SINE || type == TRIANGLE; }
             enum Type {SINE, TRIANGLE, SAW, SQUARE, NOISE } type;
@@ -293,6 +295,7 @@ namespace imajuscule {
             bool operator < (const Sound & other) const { return type < other.type; }
             Sound(Type t) : type(t) {}
         };
+        
         struct soundId {
             soundId( Sound sound, float freq_hz ) : sound(sound), period_length( freq_to_int_period( freq_hz ) ) {
                 A( period_length >= 2 );
@@ -349,6 +352,7 @@ namespace imajuscule {
             RAIILock(const RAIILock &) = delete;
             RAIILock & operator = (const RAIILock &) = delete;
         };
+        
         struct outputData {
         private:
 
