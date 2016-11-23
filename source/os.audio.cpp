@@ -25,6 +25,8 @@
 
 #include "globals.h"
 
+#include "param.h"
+
 #include "os.log.h"
 
 #include "os.audio.h"
