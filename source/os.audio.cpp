@@ -399,13 +399,11 @@ void Audio::doInit() {
     const char * test = getenv (lat);
 #endif
     
-    if_A(test)
-    {
-        A(!strcmp(test, latVal));
+    A(test);
+    A(!strcmp(test, latVal));
 #ifdef _WIN32
-        free(test);
+    free(test);
 #endif
-    }
 #endif
     
     audioIn.Init();
