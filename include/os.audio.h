@@ -9,6 +9,7 @@
 #endif
 
 #include "os.log.h"
+#include "globals.h"
 
 #include "range.h"
 #include "cyclic.h"
@@ -84,8 +85,11 @@ namespace imajuscule {
         : Sensor<FreqFromZC, NO_LOCK, float>(&a)
         , positive_zeros_dist(16, 0)
         , signal_range(0.f,0.f)
+        , bWasNeg(true)
         {
-            filter_.initWithSampleRate(((float)SAMPLE_RATE)/(float)sampling_period, 50, false);
+            filter_.initWithSampleRate(((float)SAMPLE_RATE)/(float)sampling_period,
+                                       50,
+                                       false /* not adaptative (faster) */);
         }
         
         void feed(SAMPLE val)
@@ -102,18 +106,14 @@ namespace imajuscule {
             
             signal_range.extend(val);
             
-            if(val > upperZero && bWasNeg)
-            {
+            if(val > upperZero && bWasNeg) {
                 positive_zeros_dist.feed(acc);
                 acc = 0;
                 bWasNeg = false;
             }
-            else
-            {
-                if(!bWasNeg && val< upperZero)
-                    bWasNeg = true;
+            else if(!bWasNeg && val< upperZero) {
+                bWasNeg = true;
             }
-
             acc++;
         }
         
@@ -125,85 +125,13 @@ namespace imajuscule {
         
         cyclic<int> positive_zeros_dist; // zero crossing intervals are recorded over several time steps
         int acc = 0;
-        bool bWasNeg = true;
+        bool bWasNeg : 1;
         
         range<float> signal_range; // range is representative of a single time step (except for very first calculation of a series)
 
         std::string const name = std::string("AUF");
     };
     
-    /*
-    // according to http://www.fon.hum.uva.nl/paul/papers/Proceedings_1993.pdf
-    struct FreqFromAutocorr : public FreqAlgo
-    {
-        bool needsLock () override {return true;}
-
-        static const size_t bufferLength = 2048; // TODO adapt wrt lowest freq, so that hanning window spans over 3 periods
-        static const size_t bufferWithPaddingLength = ceil_power_of_two(bufferLength + bufferLength/2);
-        FreqFromAutocorr()
-        {
-            fft1.resize(bufferWithPaddingLength);
-            withZeroPading.resize(bufferWithPaddingLength);
-            processing.reserve(bufferLength);
-            willProcess.reserve(bufferLength);
-            live.reserve(bufferLength);
-            hanning.reserve(bufferLength);
-            inv_hanning_autocorr.reserve(bufferLength);
-            for(int i=0; i<bufferLength; ++i)
-            {
-                float fi = ((float)i) / (float)bufferLength;
-                float coeff = 2.f*M_PI * fi ;
-                float c = cos(coeff);
-                
-                hanning.push_back( 0.5f - (0.5f * c) );
-                float s =sin(coeff);
-                
-                inv_hanning_autocorr.push_back( 1.f /
-                                               ( (1.f - fi)*(2.f/3.f + c/3.f) + s/(2.f*M_PI))
-                                               );
-            }
-            
-        }
-        ~FreqFromAutocorr();
-        
-        // called in the audio thread
-        void feed(SAMPLE val)
-        {
-            live.push_back(val);
-            if(live.size()==bufferLength)
-            {
-                willProcess.swap(live);
-                live.clear();
-            }
-        }
-        
-        // called in the main thread, while lock is taken
-        void computeWhileLocked() override;
-        // called in the main thread, outside lock scope
-        Result computeFrequency(float & f) override;
-    private:
-        // when live is full, it is swapped with willProcess.
-        // when computeFrequency is called, processing and willProcess are swapped
-        std::vector<SAMPLE> withZeroPading, processing, hanning, inv_hanning_autocorr, willProcess, live;
-        
-        typedef struct { // Ugly, to not have to include kissfft header here
-            SAMPLE r;
-            SAMPLE i;
-        }my_kiss_fft_cpx;
-        std::vector<my_kiss_fft_cpx> fft1;
-        
-        void * cfg = nullptr;
-        void * cfg2 = nullptr;
-        // in the main thread
-        float mean() const
-        {
-            SAMPLE mean(0.f);
-            for(auto i : processing)
-                mean += i;
-            return mean / (SAMPLE) bufferLength;
-        }
-    };
-    */
     
     // declared NO_LOCK to share Lock between multiple algorithms
     struct AlgoMax : public Sensor<AlgoMax, NO_LOCK, float>
@@ -244,10 +172,7 @@ namespace imajuscule {
         
         void step(const SAMPLE * inputBuffer, int framesPerBuffer);
         
-        //FreqFromPeaks
-        //FreqFromAutocorr
-        FreqFromZC
-            algo_freq;
+        FreqFromZC algo_freq;
         
         AlgoMax algo_max;
         
@@ -276,9 +201,11 @@ namespace imajuscule {
         private:
             enum { AUDIO_UNUSED_FRAME_COUNT_FOR_SLEEP = 100 };
             AudioIn() : Activator ( AUDIO_UNUSED_FRAME_COUNT_FOR_SLEEP ),
-            data( *this ){};
+            data( *this ),
+            bInitialized_(false)
+            {};
             
-            bool bInitialized_ = false;
+            bool bInitialized_ : 1;
             PaStream *stream = nullptr;
             
             paTestData data;
@@ -413,16 +340,17 @@ namespace imajuscule {
         };
         
         class AudioOut {
+            AudioOut() : bInitialized(false) {}
+            
             friend class Audio;
             void Init();
             void TearDown();
 
             PaStream *stream = nullptr;
-            bool bInitialized = false;
+            bool bInitialized : 1;
             outputData data;
             
         private:
-            
             Sounds sounds;
         public:
             int openChannel();

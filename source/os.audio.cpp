@@ -571,8 +571,7 @@ void AudioOut::Init() {
     
     LG(INFO, "AudioOut::Init : initializing %s", Pa_GetVersionText());
     PaError err = Pa_Initialize();
-    if(likely(err == paNoError))
-    {
+    if(likely(err == paNoError)) {
         bInitialized = true;
         
         LG(INFO, "AudioOut::Init : done initializing %s", Pa_GetVersionText());
@@ -709,7 +708,7 @@ void AudioOut::TearDown() {
         bInitialized = false;
 
         PaError err = Pa_Terminate();
-        if(unlikely(err != paNoError))
+        if(err != paNoError)
         {
             LG(ERR, "AudioOut::TearDown : PA_Terminate failed : %s", Pa_GetErrorText(err));
             return;
@@ -724,15 +723,13 @@ void AudioIn::TearDown()
 {
     Activator::sleep();
 
-    if(likely(bInitialized_))
-    {
+    if(bInitialized_) {
         data.algo_freq.Unregister();
         data.algo_max.Unregister();
         
         bInitialized_ = false;
     }
-    else
-    {
+    else {
         LG(ERR, "AudioIn::TearDown : was not initialized");
     }
 }
@@ -860,7 +857,6 @@ void outputData::step(SAMPLE *outputBuffer, int framesPerBuffer) {
     }
     
     // apply the effect
-
     for( auto & delay : delays ) {
         delay.step(outputBuffer, framesPerBuffer);
     }
@@ -1068,13 +1064,6 @@ InternalResult AlgoMax::compute(float &f)
     return InternalResult::COMPLETE_ERROR;
 }
 
-/*
-void FreqFromAutocorr::computeWhileLocked()
-{
-    processing.clear();
-    processing.swap(willProcess);
-}*/
-
 static void plot(const char*title,const std::vector<SAMPLE>&v)
 {
     return;
@@ -1109,150 +1098,6 @@ static void plot(const char*title,const std::vector<SAMPLE>&v)
     }
     
 }
-/*
-auto FreqFromAutocorr::computeFrequency(float & f) -> Result
-{
-    if(processing.empty())
-        return Result::NOT_ENOUGH_DATA;
-    
-    /////////////////////////
-    // substract mean value
-    /////////////////////////
-    
-    {
-        auto mean_value = mean();
-        
-        for(auto & v:processing)
-        {
-            v -= mean_value;
-        }
-    }
-    
-    plot("mean substracted", processing);
-    
-    /////////////////////////
-    // multiply by hanning window
-    /////////////////////////
-    
-    std::transform(processing.begin(), processing.end(),
-                   hanning.begin(),
-                   processing.begin(),
-                   std::multiplies<SAMPLE>());
-    
-    plot("windowed", processing);
-
-    ////////////////////////
-    // pad with 0s
-    ////////////////////////
-    
-    {
-        size_t i = 0;
-        for(; i<bufferLength; i++)
-        {
-            withZeroPading[i] = processing[i];
-        }
-        for(;i<bufferWithPaddingLength; i++)
-        {
-            withZeroPading[i] = 0.f;
-        }
-    }
-    
-    plot("padded", withZeroPading);
-
-    ////////////////////////
-    // compute FFT
-    ////////////////////////
-    
-    {
-        if(!cfg)
-        {
-            cfg = kiss_fftr_alloc(bufferWithPaddingLength, 0, nullptr, nullptr);
-        }
-        
-        if(cfg)
-        {
-            kiss_fftr((kiss_fftr_cfg)cfg, withZeroPading.data(), (kiss_fft_cpx*)fft1.data());
-        }
-        else
-        {
-            LG(ERR, "not enough memory?");
-            return Result::NOT_ENOUGH_MEMORY;
-        }
-    }
-    
-    ////////////////////////
-    // square in frequenty domain
-    ////////////////////////
-    
-    {
-        // (a+bi)^2 = a^2 + 2abi - b^2
-        for(auto & c : fft1)
-        {
-            c.r = c.r * c.r + c.i * c.i;
-            c.i = 0;
-        }
-    }
-    
-    ////////////////////////
-    // compute FFT2
-    ////////////////////////
-    
-    {
-        if(!cfg2)
-        {
-            cfg2 = kiss_fftr_alloc(bufferWithPaddingLength, 1, nullptr, nullptr);
-        }
-        
-        if(cfg2)
-        {
-            kiss_fftri((kiss_fftr_cfg)cfg2, (const kiss_fft_cpx*)fft1.data(), withZeroPading.data());
-        }
-        else
-        {
-            LG(ERR, "not enough memory?");
-            return Result::NOT_ENOUGH_MEMORY;
-        }
-    }
-
-    plot("padded after ffts", withZeroPading);
-
-    /////////////////////////
-    // divide by hanning window autocorrelation
-    /////////////////////////
-    
-    std::transform(withZeroPading.begin(), withZeroPading.end(),
-                   inv_hanning_autocorr.begin(),
-                   withZeroPading.begin(),
-                   std::multiplies<SAMPLE>());
-    plot("compensation", withZeroPading);
-
-    f = 0.f;
-    SAMPLE peak = 0.f;
-    for(int i=bufferLength; i>bufferLength/2; --i)
-    {
-        int cmp = bufferLength-i;
-        withZeroPading[i] *= inv_hanning_autocorr[cmp];
-        if(withZeroPading[i]>peak)
-        {
-            f = (float )cmp;
-            peak = withZeroPading[i];
-        }
-    }
-    LG(INFO,"%.4f", f);
-    plot("divide by hauto", withZeroPading);
-    
-    // when divide by hanning autocorr, the last tiny part of the spectrum goes wild, maybe that was why there was an upsampling in the algorithm
-
-    return Result::OK;
-}
-
-FreqFromAutocorr::~FreqFromAutocorr()
-{
-    if( cfg )
-        free( cfg );
-    if( cfg2 )
-        free( cfg2 );
-}*/
 
 InternalResult FreqFromZC::compute(float & f)
 {
