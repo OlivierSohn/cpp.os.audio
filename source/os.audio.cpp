@@ -208,6 +208,10 @@ void paTestData::step(const SAMPLE *rptr, int framesPerBuffer)
             algo_freq.feed(filtered_value);
         }
     }
+    else {
+        algo_max.forget();
+        algo_freq.forget();
+    }
 }
 
 
@@ -661,6 +665,7 @@ bool AudioIn::do_sleep() {
     if(stream)
     {
         PaError err = Pa_CloseStream( stream );
+        stream = nullptr;
         if( unlikely(err != paNoError) ) {
             LG(ERR, "AudioIn::do_sleep : Pa_CloseStream failed : %s", Pa_GetErrorText(err));
             A(0);
@@ -697,6 +702,7 @@ void AudioOut::TearDown() {
     if(stream)
     {
         PaError err = Pa_CloseStream( stream );
+        stream = nullptr;
         if( unlikely(err != paNoError) ) {
             LG(ERR, "AudioOut::TearDown : Pa_CloseStream failed : %s", Pa_GetErrorText(err));
             A(0);
