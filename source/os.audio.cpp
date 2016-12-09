@@ -745,21 +745,21 @@ void Audio::doTearDown() {
     audioIn.TearDown();
 }
 
-int AudioOut::openChannel() {
+uint8_t AudioOut::openChannel() {
     Init();
     return data.openChannel();
 }
-void AudioOut::closeChannel( int id ) {
+void AudioOut::closeChannel( uint8_t id ) {
     if( data.closeChannel( id ) ) {
         TearDown();
     }
 }
 
-void AudioOut::play( int channel_id, std::vector<Request> && v ) {
+void AudioOut::play( uint8_t channel_id, std::vector<Request> && v ) {
     data.play( channel_id, std::move( v ) );
 }
 
-void AudioOut::setVolume( int channel_id, float v ) {
+void AudioOut::setVolume( uint8_t channel_id, float v ) {
     data.setVolume( channel_id, v);
 }
 
@@ -799,56 +799,38 @@ void outputData::DelayLine::step(SAMPLE *outputBuffer, int framesPerBuffer) {
 outputData::outputData() : delays{{1000, 0.6f},{4000, 0.2f}, {4300, 0.3f}, {5000, 0.1f}} {
 }
 
-int outputData::openChannel() {
+uint8_t outputData::openChannel() {
     RAIILock l(used);
     
-    channels.emplace_back();
+    auto index = available_ids.Take(channels);
+    A(index != AUDIO_CHANNEL_NONE); // now channel vector is full!
     
-    return channels.back().id;
+    return index;
 }
 
-bool outputData::closeChannel(int channel_id) {
+bool outputData::closeChannel(uint8_t channel_id) {
     RAIILock l(used);
     
-    channels.erase(std::remove_if(channels.begin(),
-                                  channels.end(),
-                                  [=](const Channel & elt) { return elt.id == channel_id; } ),
-                   channels.end());
-    
+    std::queue<Request> empty;
+    editChannel(channel_id).requests.swap(empty);
+    available_ids.Return(channel_id);
     return channels.empty();
 }
 
-void outputData::play( int channel_id, std::vector<Request> && v ) {
+void outputData::play( uint8_t channel_id, std::vector<Request> && v ) {
     RAIILock l(used);
     
-    bool bFound (false);
-    for( auto & c : channels ) {
-        if( channel_id == c.id ) {
-            for( auto & sound : v ) {
-                c.requests.emplace( std::move(sound) );
-            }
-            bFound = true;
-            break;
-        }
+    auto & c = editChannel(channel_id);
+    for( auto & sound : v ) {
+        c.requests.emplace( std::move(sound) );
     }
-    
-    A(bFound);
 }
 
-void outputData::setVolume(int channel_id, float vol) {
-    bool bFound (false);
-    for( auto & c : channels ) {
-        if( channel_id == c.id ) {
-            c.playing.transition_volume_remaining = Channel::Playing::volume_transition_length;
-            c.playing.channel_volume_increments = (vol - c.playing.channel_volume) / (float) Channel::Playing::volume_transition_length;
-            bFound = true;
-            break;
-        }
-    }
-    A(bFound);
+void outputData::setVolume(uint8_t channel_id, float vol) {
+    auto & c = editChannel(channel_id);
+    c.playing.transition_volume_remaining = Channel::Playing::volume_transition_length;
+    c.playing.channel_volume_increments = (vol - c.playing.channel_volume) / (float) Channel::Playing::volume_transition_length;
 }
-
-int outputData::Channel::gId = 0;
 
 void outputData::step(SAMPLE *outputBuffer, int framesPerBuffer) {
     

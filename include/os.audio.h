@@ -195,6 +195,7 @@ namespace imajuscule {
         public:
             void Init();
             void TearDown();
+            bool Initialized() const { return bInitialized_; }
         protected:
             bool do_wakeup() override;
             bool do_sleep() override;
@@ -280,11 +281,13 @@ namespace imajuscule {
             RAIILock & operator = (const RAIILock &) = delete;
         };
         
+        // reserved number to indicate "no channel"
+        enum : uint8_t {AUDIO_CHANNEL_NONE = std::numeric_limits<uint8_t>::max()};
+        
         struct outputData {
         private:
 
             struct Channel {
-                Channel() : id(gId){ ++gId; }
                 void step(SAMPLE * outputBuffer, int framesPerBuffer);
 
                 struct Playing {
@@ -305,10 +308,10 @@ namespace imajuscule {
                 } playing;
 
                 std::queue<Request> requests;
-                int id;
-                static int gId;
             };
 
+            static uint8_t take_available_id();
+            AvailableIndexes<uint8_t> available_ids;
             std::vector<Channel> channels;
             std::atomic_bool used { false }; // maybe we need two level of locks, one here for the vector and many inside for the elements
 
@@ -332,14 +335,14 @@ namespace imajuscule {
 #endif
 
             // called from main thread
-            int openChannel();
-            Channel & editChannel(int id) const;
-            void play( int channel_id, std::vector<Request> && );
-            void setVolume( int channel_id, float vol );
-            bool closeChannel(int channel_id);
+            uint8_t openChannel();
+            Channel & editChannel(uint8_t id) { return channels[id]; }
+            void play( uint8_t channel_id, std::vector<Request> && );
+            void setVolume( uint8_t channel_id, float vol );
+            bool closeChannel(uint8_t channel_id);
         };
         
-        class AudioOut {
+        class AudioOut : public NonCopyable {
             AudioOut() : bInitialized(false) {}
             
             friend class Audio;
@@ -353,10 +356,11 @@ namespace imajuscule {
         private:
             Sounds sounds;
         public:
-            int openChannel();
-            void play( int channel_id, std::vector<Request> && );
-            void setVolume( int channel_id, float );
-            void closeChannel(int channel_id);
+            bool Initialized() const { return bInitialized; }
+            uint8_t openChannel();
+            void play( uint8_t channel_id, std::vector<Request> && );
+            void setVolume( uint8_t channel_id, float );
+            void closeChannel(uint8_t channel_id);
             
             Sounds & editSounds() { return sounds; }
         };
