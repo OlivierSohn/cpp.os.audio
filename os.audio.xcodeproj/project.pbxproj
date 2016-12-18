@@ -9,7 +9,6 @@
 /* Begin PBXBuildFile section */
 		097835671D57B0EA00E47ED3 /* unity.build.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 097835661D57B0EA00E47ED3 /* unity.build.cpp */; };
 		097835681D57B0EA00E47ED3 /* unity.build.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 097835661D57B0EA00E47ED3 /* unity.build.cpp */; };
-		09E7B1341BB5CA29007BAA5F /* os.audio.h in Headers */ = {isa = PBXBuildFile; fileRef = 09E7B1331BB5CA29007BAA5F /* os.audio.h */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -35,6 +34,8 @@
 		09C84A4A1C271D95002CF5B7 /* Project.Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Project.Debug.xcconfig; sourceTree = "<group>"; };
 		09C84A4B1C271D95002CF5B7 /* Project.Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Project.Release.xcconfig; sourceTree = "<group>"; };
 		09C84A4C1C271D95002CF5B7 /* Project.Shared.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Project.Shared.xcconfig; sourceTree = "<group>"; };
+		09CA7B291E05A25600E9CDF3 /* public.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = public.h; path = include/public.h; sourceTree = "<group>"; };
+		09CA7B2A1E05A27C00E9CDF3 /* private.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = private.h; path = source/private.h; sourceTree = "<group>"; };
 		09E7B11C1BB5C64E007BAA5F /* libos.audio.osx.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libos.audio.osx.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		09E7B1271BB5C729007BAA5F /* libos.audio.ios.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libos.audio.ios.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		09E7B1301BB5CA01007BAA5F /* os.audio.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; lineEnding = 0; name = os.audio.cpp; path = source/os.audio.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
@@ -97,6 +98,7 @@
 		09E7B1321BB5CA0E007BAA5F /* source */ = {
 			isa = PBXGroup;
 			children = (
+				09CA7B2A1E05A27C00E9CDF3 /* private.h */,
 				097835661D57B0EA00E47ED3 /* unity.build.cpp */,
 				09E7B1301BB5CA01007BAA5F /* os.audio.cpp */,
 			);
@@ -106,6 +108,7 @@
 		09E7B1351BB5CA30007BAA5F /* include */ = {
 			isa = PBXGroup;
 			children = (
+				09CA7B291E05A25600E9CDF3 /* public.h */,
 				09E7B1331BB5CA29007BAA5F /* os.audio.h */,
 			);
 			name = include;
@@ -118,7 +121,6 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				09E7B1341BB5CA29007BAA5F /* os.audio.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

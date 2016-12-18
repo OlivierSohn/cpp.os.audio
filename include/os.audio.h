@@ -1,21 +1,3 @@
-#pragma once
-
-#include <atomic>
-#include <queue>
-#include <algorithm>
-
-#ifdef __APPLE__
-#include "TargetConditionals.h"
-#endif
-
-#include "os.log.h"
-#include "globals.h"
-
-#include "range.h"
-#include "cyclic.h"
-#include "slidingaverage.h"
-#include "cg.math.filter.h"
-#include "sensor.h"
 
 /* Select sample format. */
 #if 1
@@ -218,7 +200,7 @@ namespace imajuscule {
         
         struct Sound {
             bool zeroOnPeriodBoundaries() const { return type == SINE || type == TRIANGLE; }
-            enum Type {SINE, TRIANGLE, SAW, SQUARE, NOISE } type;
+            enum Type : unsigned char {SINE, TRIANGLE, SAW, SQUARE, NOISE } type : 4;
             bool operator == (const Sound & other) const { return type == other.type; }
             bool operator < (const Sound & other) const { return type < other.type; }
             Sound(Type t) : type(t) {}
