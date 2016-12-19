@@ -40,6 +40,7 @@ namespace imajuscule {
         friend class Sensor<FreqFromZC, NO_LOCK, float>;
         
         std::string const & getVarName() { return name; }
+        const char * getVarDoc() { return "Audio frequency"; }
 
         // use constant epsilon instead of 0 to not record zero crossing related to noise
         const SAMPLE upperZero =
@@ -121,7 +122,8 @@ namespace imajuscule {
         friend class Sensor<AlgoMax, NO_LOCK, float>;
         
         std::string const & getVarName() { return name; }
-        
+        const char * getVarDoc() { return "Audio amplitude"; }
+
         AlgoMax(std::atomic_bool &a)
         : Sensor<AlgoMax, NO_LOCK, float>(&a)
         {}
