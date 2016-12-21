@@ -25,6 +25,7 @@
 
 /* Begin PBXFileReference section */
 		097835661D57B0EA00E47ED3 /* unity.build.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = unity.build.cpp; path = source/unity.build.cpp; sourceTree = "<group>"; };
+		09C645AB1E0A9E4200153C61 /* parse.music.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = parse.music.cpp; path = source/parse.music.cpp; sourceTree = "<group>"; };
 		09C84A441C271D95002CF5B7 /* osx.debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = osx.debug.xcconfig; sourceTree = "<group>"; };
 		09C84A451C271D95002CF5B7 /* ios.debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = ios.debug.xcconfig; sourceTree = "<group>"; };
 		09C84A461C271D95002CF5B7 /* ios.release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = ios.release.xcconfig; sourceTree = "<group>"; };
@@ -98,9 +99,10 @@
 		09E7B1321BB5CA0E007BAA5F /* source */ = {
 			isa = PBXGroup;
 			children = (
+				09E7B1301BB5CA01007BAA5F /* os.audio.cpp */,
+				09C645AB1E0A9E4200153C61 /* parse.music.cpp */,
 				09CA7B2A1E05A27C00E9CDF3 /* private.h */,
 				097835661D57B0EA00E47ED3 /* unity.build.cpp */,
-				09E7B1301BB5CA01007BAA5F /* os.audio.cpp */,
 			);
 			name = source;
 			sourceTree = "<group>";

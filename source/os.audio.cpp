@@ -826,27 +826,28 @@ void outputData::Channel::step(SAMPLE * outputBuffer, int framesPerBuffer)
 }
 
 void outputData::Channel::Playing::consume(std::queue<Request> & requests) {
-    if( remaining_samples_count <= 0 ) {
-        
-        if (!requests.empty())
-        {
-            auto & request = requests.front();
-            
-            play(request);
-            
-            requests.pop();
-        }
+    if( remaining_samples_count > 0 ) {
+        return;
     }
+    if (requests.empty()) {
+        return;
+    }
+    play(requests.front());
+    requests.pop();
 }
+
 void outputData::Channel::Playing::play(Request & request) {
-    A( request.duration_in_samples > 0 );
+    if( request.duration_in_samples <= 0 ) {
+        return;
+    }
     
     sound = request.buffer;
     sound_volume = request.volume;
     remaining_samples_count = request.duration_in_samples;
     next_sample_index = 0;
 }
-const float amplitude = 0.1f; // ok to have 10 chanels at max amplitude at the same time
+
+constexpr float amplitude = 0.1f; // ok to have 10 chanels at max amplitude at the same time
 void outputData::Channel::Playing::write(SAMPLE * outputBuffer, int framesPerBuffer) {
     auto s = -1;
     
@@ -922,8 +923,6 @@ static float my_rand(float) {
 template < typename F >
 void soundBuffer::generate( int period, F f ) {
     
-    values.reserve( period );
-    
     // Let's compute the waveform. First sample is non zero, last sample is zero, so the mapping is:
     //
     //  sample(int) [0 .. period - 1]  ->  radian(float) [2*pi/period .. 2*pi]
@@ -938,6 +937,8 @@ void soundBuffer::generate( int period, F f ) {
     A( (int)values.size() == period );
 }
 soundBuffer::soundBuffer( soundId const & id ) {
+    values.reserve( id.period_length );
+
     switch (id.sound.type) {
         case Sound::NOISE:
         {
@@ -988,6 +989,10 @@ soundBuffer::soundBuffer( soundId const & id ) {
             
         case Sound::SQUARE:
             generate( id.period_length, square );
+            break;
+            
+        case Sound::SILENCE:
+            generate( id.period_length, [](float){ return 0.f; } );
             break;
             
         default:

@@ -6,4 +6,5 @@
 
 #include "../../cg.math/include/public.h"
 
+#include "sound.h"
 #include "os.audio.h"
