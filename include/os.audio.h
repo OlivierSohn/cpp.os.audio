@@ -194,6 +194,29 @@ namespace imajuscule {
         };
     }
     
+    class AudioOut : public NonCopyable {
+        AudioOut() : bInitialized(false) {}
+        
+        friend class Audio;
+        void Init();
+        void TearDown();
+        
+        PaStream *stream = nullptr;
+        bool bInitialized : 1;
+        outputData data;
+        
+    private:
+        Sounds sounds;
+    public:
+        bool Initialized() const { return bInitialized; }
+        uint8_t openChannel();
+        void play( uint8_t channel_id, std::vector<Request> && );
+        void setVolume( uint8_t channel_id, float );
+        void closeChannel(uint8_t channel_id);
+        
+        Sounds & editSounds() { return sounds; }
+    };
+
     class Audio {
         friend class Globals;
     public:

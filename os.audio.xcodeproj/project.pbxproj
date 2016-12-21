@@ -26,6 +26,9 @@
 /* Begin PBXFileReference section */
 		097835661D57B0EA00E47ED3 /* unity.build.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = unity.build.cpp; path = source/unity.build.cpp; sourceTree = "<group>"; };
 		09C645AB1E0A9E4200153C61 /* parse.music.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = parse.music.cpp; path = source/parse.music.cpp; sourceTree = "<group>"; };
+		09C645AC1E0ADC9800153C61 /* sound.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = sound.h; path = include/sound.h; sourceTree = "<group>"; };
+		09C645AD1E0ADCEE00153C61 /* parse.music.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = parse.music.h; path = include/parse.music.h; sourceTree = "<group>"; };
+		09C645AF1E0ADD6900153C61 /* sound.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = sound.cpp; path = source/sound.cpp; sourceTree = "<group>"; };
 		09C84A441C271D95002CF5B7 /* osx.debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = osx.debug.xcconfig; sourceTree = "<group>"; };
 		09C84A451C271D95002CF5B7 /* ios.debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = ios.debug.xcconfig; sourceTree = "<group>"; };
 		09C84A461C271D95002CF5B7 /* ios.release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = ios.release.xcconfig; sourceTree = "<group>"; };
@@ -102,6 +105,7 @@
 				09E7B1301BB5CA01007BAA5F /* os.audio.cpp */,
 				09C645AB1E0A9E4200153C61 /* parse.music.cpp */,
 				09CA7B2A1E05A27C00E9CDF3 /* private.h */,
+				09C645AF1E0ADD6900153C61 /* sound.cpp */,
 				097835661D57B0EA00E47ED3 /* unity.build.cpp */,
 			);
 			name = source;
@@ -110,8 +114,10 @@
 		09E7B1351BB5CA30007BAA5F /* include */ = {
 			isa = PBXGroup;
 			children = (
-				09CA7B291E05A25600E9CDF3 /* public.h */,
 				09E7B1331BB5CA29007BAA5F /* os.audio.h */,
+				09C645AD1E0ADCEE00153C61 /* parse.music.h */,
+				09CA7B291E05A25600E9CDF3 /* public.h */,
+				09C645AC1E0ADC9800153C61 /* sound.h */,
 			);
 			name = include;
 			sourceTree = "<group>";

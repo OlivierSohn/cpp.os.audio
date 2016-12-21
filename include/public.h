@@ -7,4 +7,5 @@
 #include "../../cg.math/include/public.h"
 
 #include "sound.h"
+#include "parse.music.h"
 #include "os.audio.h"
