@@ -94,24 +94,19 @@ void outputData::Channel::step(SAMPLE * outputBuffer, int n_max_writes)
 {
     A(playing.remaining_samples_count >= 0);
     
-    while(true) {
-        if(playing.remaining_samples_count >= n_max_writes) {
-            playing.write( outputBuffer, n_max_writes );
-            playing.remaining_samples_count -= n_max_writes;
+    while(playing.remaining_samples_count < n_max_writes) {
+        playing.write( outputBuffer, playing.remaining_samples_count );
+        n_max_writes -= playing.remaining_samples_count;
+        outputBuffer += playing.remaining_samples_count;
+        A(n_max_writes > 0);
+        if (requests.empty()) {
+            playing.remaining_samples_count = 0;
             return;
         }
-        else {
-            playing.write( outputBuffer, playing.remaining_samples_count );
-            n_max_writes -= playing.remaining_samples_count;
-            outputBuffer += playing.remaining_samples_count;
-            A(n_max_writes > 0);
-            if (requests.empty()) {
-                playing.remaining_samples_count = 0;
-                return;
-            }
-            playing.consume(requests);
-        }
+        playing.consume(requests);
     }
+    playing.write( outputBuffer, n_max_writes );
+    playing.remaining_samples_count -= n_max_writes;
 }
 
 constexpr float amplitude = 0.1f; // ok to have 10 chanels at max amplitude at the same time
