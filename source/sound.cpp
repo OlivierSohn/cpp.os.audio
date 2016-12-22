@@ -92,13 +92,8 @@ void outputData::step(SAMPLE *outputBuffer, int framesPerBuffer) {
 
 void outputData::Channel::step(SAMPLE * outputBuffer, int n_max_writes)
 {
-    if( playing.remaining_samples_count <= 0 ) {
-        if (requests.empty()) {
-            return;
-        }
-        playing.consume(requests);
-    }
-
+    A(playing.remaining_samples_count >= 0);
+    
     while(true) {
         if(playing.remaining_samples_count >= n_max_writes) {
             playing.write( outputBuffer, n_max_writes );
