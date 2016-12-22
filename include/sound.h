@@ -98,10 +98,20 @@ namespace imajuscule {
                 float channel_volume = 1.f;
                 float channel_volume_increments = 0.f;
                 
-                void consume( std::queue<Request> & );
+                void consume( std::queue<Request> & requests) {
+                    play(requests.front());
+                    requests.pop();
+                }
+                
                 void write(SAMPLE * outputBuffer, int framesPerBuffer);
             private:
-                void play(Request &);
+                void play(Request & r) {
+                    sound = r.buffer;
+                    sound_volume = r.volume;
+                    A(r.duration_in_samples >= 0);
+                    remaining_samples_count = r.duration_in_samples;
+                    next_sample_index = 0;
+                }
             } playing;
             
             std::queue<Request> requests;

@@ -84,45 +84,46 @@ void outputData::step(SAMPLE *outputBuffer, int framesPerBuffer) {
     
     // apply the effect
     for( auto & delay : delays ) {
-        delay.step(outputBuffer, framesPerBuffer);
+        // deactivated on purpose : reactivate once we have cross fade
+        // to see if it is ok, else need to low pass filtered
+        //delay.step(outputBuffer, framesPerBuffer);
     }
 }
 
-void outputData::Channel::step(SAMPLE * outputBuffer, int framesPerBuffer)
+void outputData::Channel::step(SAMPLE * outputBuffer, int n_max_writes)
 {
-    playing.consume(requests);
-    
-    playing.write( outputBuffer, framesPerBuffer );
-}
+    if( playing.remaining_samples_count <= 0 ) {
+        if (requests.empty()) {
+            return;
+        }
+        playing.consume(requests);
+    }
 
-void outputData::Channel::Playing::consume(std::queue<Request> & requests) {
-    if( remaining_samples_count > 0 ) {
-        return;
+    while(true) {
+        if(playing.remaining_samples_count >= n_max_writes) {
+            playing.write( outputBuffer, n_max_writes );
+            playing.remaining_samples_count -= n_max_writes;
+            return;
+        }
+        else {
+            playing.write( outputBuffer, playing.remaining_samples_count );
+            n_max_writes -= playing.remaining_samples_count;
+            outputBuffer += playing.remaining_samples_count;
+            A(n_max_writes > 0);
+            if (requests.empty()) {
+                playing.remaining_samples_count = 0;
+                return;
+            }
+            playing.consume(requests);
+        }
     }
-    if (requests.empty()) {
-        return;
-    }
-    play(requests.front());
-    requests.pop();
-}
-
-void outputData::Channel::Playing::play(Request & request) {
-    if( request.duration_in_samples <= 0 ) {
-        return;
-    }
-    sound = request.buffer;
-    sound_volume = request.volume;
-    remaining_samples_count = request.duration_in_samples;
-    next_sample_index = 0;
 }
 
 constexpr float amplitude = 0.1f; // ok to have 10 chanels at max amplitude at the same time
-void outputData::Channel::Playing::write(SAMPLE * outputBuffer, int framesPerBuffer) {
+void outputData::Channel::Playing::write(SAMPLE * outputBuffer, int n_writes) {
     auto s = -1;
-    
     auto a = amplitude * sound_volume;
-    
-    for( int i=0; i<framesPerBuffer && remaining_samples_count > 0; i++ ) {
+    for( int i=0; i<n_writes; i++ ) {
         if( s == -1 ) {
             s = (int) sound->values.size();
         }
@@ -137,7 +138,6 @@ void outputData::Channel::Playing::write(SAMPLE * outputBuffer, int framesPerBuf
         *outputBuffer += a * channel_volume * sound->values[next_sample_index];
         ++outputBuffer;
         ++next_sample_index;
-        --remaining_samples_count;
     }
 }
 
