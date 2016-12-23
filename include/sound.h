@@ -141,20 +141,27 @@ namespace imajuscule {
                     if(!current.buffer) {
                         return false;
                     }
+                    // emulate a "from zero" xfade
                     current.reset();
-                    current.duration_in_samples = size_xfade-1; // needed for crossfading_from_zero_remaining()
-                    remaining_samples_count = size_half_xfade;
+                    current.duration_in_samples = size_xfade-1; // to do the "from zero" writes
+                    remaining_samples_count = size_half_xfade;  // to do the "from zero" writes
                     next_sample_index = 0;
                     previous_next_sample_index = 0;
-                    return true;
                 }
-                current = requests.front();
-                requests.pop();
-                
-                A(current.duration_in_samples >= 0);
-                remaining_samples_count = current.duration_in_samples;
-                next_sample_index = 0;
-                previous_next_sample_index = 0;
+                else if(!next && !current.buffer) {
+                    // emulate a "to zero" xfade
+                    current.duration_in_samples = 2 * size_xfade; // to skip the "from zero" writes
+                    remaining_samples_count = size_half_xfade + 1; // to skip the "normal" writes and begin the "to zero" phase
+                }
+                else {
+                    current = requests.front();
+                    requests.pop();
+                    
+                    A(current.duration_in_samples >= 0);
+                    remaining_samples_count = current.duration_in_samples;
+                    next_sample_index = 0;
+                    previous_next_sample_index = 0;
+                }
                 return true;
             }
             

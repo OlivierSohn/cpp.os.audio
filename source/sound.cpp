@@ -288,7 +288,7 @@ void outputData::Channel::write_crossfading_from_zero(SAMPLE * outputBuffer, flo
                 next_sample_index = 0;
             }
             A(next_sample_index < s);
-            val += (1.f - xfade_ratio) * current.volume * current.buffer->values[next_sample_index];
+            val = (1.f - xfade_ratio) * current.volume * current.buffer->values[next_sample_index];
             ++next_sample_index;
         }
         if(other_s) {
@@ -332,16 +332,18 @@ void outputData::Channel::write_crossfading_to_zero(SAMPLE * outputBuffer, float
 #endif
     auto * other_buffer = next ? next->buffer : nullptr;
     auto other_s = other_buffer? other_buffer->values.size() : 0;
-    auto s = (int) current.buffer->values.size();
+    auto s = current.buffer ? (int) current.buffer->values.size() : 0;
     auto const a = amplitude;
     for( int i=0; i<n_writes; i++ ) {
-        if( next_sample_index == s ) {
-            next_sample_index = 0;
+        auto val = 0.f;
+        if(s) {
+            if( next_sample_index == s ) {
+                next_sample_index = 0;
+            }
+            A(next_sample_index < s);
+            val = xfade_ratio * current.volume * current.buffer->values[next_sample_index];
+            ++next_sample_index;
         }
-        A(next_sample_index < s);
-        
-        auto val = xfade_ratio * current.volume * current.buffer->values[next_sample_index];
-        ++next_sample_index;
         if(other_s) {
             A(previous_next_sample_index >= 0);
             A(previous_next_sample_index <= other_s);
