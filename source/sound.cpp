@@ -66,8 +66,8 @@ void outputData::play( uint8_t channel_id, std::vector<Request> && v ) {
 
 void outputData::setVolume(uint8_t channel_id, float vol) {
     auto & c = editChannel(channel_id);
-    c.playing.transition_volume_remaining = Channel::Playing::volume_transition_length;
-    c.playing.channel_volume_increments = (vol - c.playing.channel_volume) / (float) Channel::Playing::volume_transition_length;
+    c.transition_volume_remaining = Channel::volume_transition_length;
+    c.channel_volume_increments = (vol - c.channel_volume) / (float) Channel::volume_transition_length;
 }
 
 void outputData::step(SAMPLE *outputBuffer, int framesPerBuffer) {
@@ -92,31 +92,132 @@ void outputData::step(SAMPLE *outputBuffer, int framesPerBuffer) {
 
 void outputData::Channel::step(SAMPLE * outputBuffer, int n_max_writes)
 {
-    A(playing.remaining_samples_count >= 0);
-    
-    while(playing.remaining_samples_count < n_max_writes) {
-        playing.write( outputBuffer, playing.remaining_samples_count );
-        n_max_writes -= playing.remaining_samples_count;
-        outputBuffer += playing.remaining_samples_count;
-        A(n_max_writes > 0);
-        if (requests.empty()) {
-            playing.remaining_samples_count = 0;
+    if(remaining_samples_count == 0) {
+        if (!consume()) {
             return;
         }
-        playing.consume(requests);
     }
-    playing.write( outputBuffer, n_max_writes );
-    playing.remaining_samples_count -= n_max_writes;
+    while(1) {
+        
+        while(remaining_samples_count < n_max_writes) {
+            {
+                auto xfade_written = crossfading_from_zero_remaining();
+                if(xfade_written > 0) {
+                    auto xfade_ratio = (1 + current.duration_in_samples - remaining_samples_count) * inv_size_xfade;
+                    xfade_written = std::min(xfade_written, remaining_samples_count);
+                    write_crossfading_from_zero( outputBuffer, xfade_ratio, xfade_written );
+                    n_max_writes -= xfade_written;
+                    remaining_samples_count -= xfade_written;
+                    A(n_max_writes > 0);
+                    outputBuffer += xfade_written;
+                    A(crossfading_from_zero_remaining() <= 0); // we are sure the xfade is finished
+                }
+            }
+            A(remaining_samples_count >= 0);
+            {
+                auto remaining_normal = remaining_samples_count - size_xfade;
+                if(remaining_normal > 0) {
+                    write( outputBuffer, remaining_normal );
+                    n_max_writes -= remaining_normal;
+                    remaining_samples_count -= remaining_normal;
+                    if(n_max_writes <= 0) {
+                        return;
+                    }
+                    outputBuffer += remaining_normal;
+                }
+            }
+            A(remaining_samples_count >= 0);
+            A(n_max_writes > 0);
+            A(remaining_samples_count <= size_xfade);
+            {
+                auto xfade_ratio = (remaining_samples_count - 1) * inv_size_xfade;
+                auto xfade_written = std::min(remaining_samples_count, n_max_writes);
+                write_crossfading_to_zero( outputBuffer, xfade_ratio, xfade_written );
+                n_max_writes -= xfade_written;
+                remaining_samples_count -= xfade_written;
+                if(n_max_writes <= 0) {
+                    return;
+                }
+                outputBuffer += xfade_written;
+                A(remaining_samples_count == 0); // we are sure the xfade is finished
+                if (!consume()) {
+                    return;
+                }
+                continue;
+            }
+            
+            A(n_max_writes > 0);
+            if (!consume()) {
+                remaining_samples_count = 0;
+                return;
+            }
+        }
+        {
+            auto xfade_written = crossfading_from_zero_remaining();
+            if(xfade_written > 0) {
+                auto xfade_ratio = (1 + current.duration_in_samples - remaining_samples_count) * inv_size_xfade;
+                xfade_written = std::min(xfade_written, n_max_writes);
+                write_crossfading_from_zero( outputBuffer, xfade_ratio, xfade_written );
+                n_max_writes -= xfade_written;
+                remaining_samples_count -= xfade_written;
+                if(n_max_writes <= 0) {
+                    return;
+                }
+                outputBuffer += xfade_written;
+                A(crossfading_from_zero_remaining() <= 0); // we are sure the xfade is finished
+                
+                if(remaining_samples_count < n_max_writes) {
+                    continue;
+                }
+            }
+        }
+        {
+            auto remaining_normal = remaining_samples_count - size_xfade;
+            if(remaining_normal > 0) {
+                if(remaining_normal <= n_max_writes) {
+                    write( outputBuffer, remaining_normal );
+                    n_max_writes -= remaining_normal;
+                    remaining_samples_count -= remaining_normal;
+                    if(n_max_writes <= 0) {
+                        return;
+                    }
+                    outputBuffer += remaining_normal;
+                }
+                else {
+                    write( outputBuffer, n_max_writes );
+                    remaining_samples_count -= n_max_writes;
+                    return;
+                }
+            }
+        }
+        A(remaining_samples_count >= 0);
+        if(remaining_samples_count <= size_xfade) {
+            auto xfade_ratio = (remaining_samples_count - 1) * inv_size_xfade;
+            auto xfade_written = std::min(remaining_samples_count, n_max_writes);
+            write_crossfading_to_zero( outputBuffer, xfade_ratio, xfade_written );
+            n_max_writes -= xfade_written;
+            remaining_samples_count -= xfade_written;
+            if(n_max_writes <= 0) {
+                return;
+            }
+            outputBuffer += xfade_written;
+            A(remaining_samples_count == 0); // we are sure the xfade is finished
+            if (!consume()) {
+                return;
+            }
+            continue;
+        }
+        return;
+    }
 }
 
 constexpr float amplitude = 0.1f; // ok to have 10 chanels at max amplitude at the same time
-void outputData::Channel::Playing::write(SAMPLE * outputBuffer, int n_writes) {
-    auto s = -1;
-    auto a = amplitude * sound_volume;
+void outputData::Channel::write(SAMPLE * outputBuffer, int const n_writes) {
+    A(n_writes > 0);
+    LG(INFO, "write %d", n_writes);
+    auto s = (int) current.buffer->values.size();
+    auto const a = amplitude * current.volume;
     for( int i=0; i<n_writes; i++ ) {
-        if( s == -1 ) {
-            s = (int) sound->values.size();
-        }
         if( next_sample_index >= s ) {
             next_sample_index = 0;
         }
@@ -125,10 +226,82 @@ void outputData::Channel::Playing::write(SAMPLE * outputBuffer, int n_writes) {
             transition_volume_remaining--;
             channel_volume += channel_volume_increments;
         }
-        *outputBuffer += a * channel_volume * sound->values[next_sample_index];
+        A(crossfading_from_zero_remaining() <= 0);
+        *outputBuffer += a * channel_volume * current.buffer->values[next_sample_index];
         ++outputBuffer;
         ++next_sample_index;
     }
+}
+
+void outputData::Channel::write_crossfading_from_zero(SAMPLE * outputBuffer, float xfade_ratio, int const n_writes) {
+    A(n_writes > 0);
+    LG(INFO, ">>>>> %d", n_writes);
+    A(n_writes <= crossfading_from_zero_remaining());
+    A(xfade_ratio >= 0.f);
+    A(xfade_ratio < 1.f);
+#ifndef NDEBUG
+    // make sure we don't skip a ratio
+    static float prev_ratio = -1.f;
+    A(prev_ratio == -1.f || std::abs(prev_ratio - xfade_ratio) < FLOAT_EPSILON || prev_ratio > xfade_ratio + 0.5f /*new cycle*/);
+#endif
+    auto s = (int) current.buffer->values.size();
+    auto const a = amplitude * current.volume;
+    for( int i=0; i<n_writes; i++ ) {
+        if( next_sample_index >= s ) {
+            next_sample_index = 0;
+        }
+        
+        if( transition_volume_remaining ) {
+            transition_volume_remaining--;
+            channel_volume += channel_volume_increments;
+        }
+        // use a lookuptable for non linear crossfades
+        //printf("%.3f ", xfade_ratio); // to make sure we use the right ranges
+        *outputBuffer += a * channel_volume * xfade_ratio * current.buffer->values[next_sample_index];
+        xfade_ratio += inv_size_xfade;
+        ++outputBuffer;
+        ++next_sample_index;
+    }
+    
+#ifndef NDEBUG
+    prev_ratio = xfade_ratio;
+#endif
+}
+
+
+void outputData::Channel::write_crossfading_to_zero(SAMPLE * outputBuffer, float xfade_ratio, int const n_writes) {
+    A(n_writes > 0);
+    LG(INFO, "<<<<< %d", n_writes);
+    A(n_writes <= remaining_samples_count);
+    A(xfade_ratio >= 0.f);
+    A(xfade_ratio < 1.f);
+#ifndef NDEBUG
+    // make sure we don't skip a ratio
+    static float prev_ratio = -1.f;
+    A(prev_ratio == -1.f || std::abs(prev_ratio - xfade_ratio) < FLOAT_EPSILON || xfade_ratio > prev_ratio + 0.5f /*new cycle*/);
+#endif
+    auto const a = amplitude * current.volume;
+    for( int i=0; i<n_writes; i++ ) {
+        auto s = (int) current.buffer->values.size();
+        if( next_sample_index >= s ) {
+            next_sample_index = 0;
+        }
+        
+        if( transition_volume_remaining ) {
+            transition_volume_remaining--;
+            channel_volume += channel_volume_increments;
+        }
+        // use a lookuptable for non linear crossfades
+        //printf("%.3f ", xfade_ratio); // to make sure we use the right ranges
+        *outputBuffer += a * channel_volume * xfade_ratio * current.buffer->values[next_sample_index];
+        xfade_ratio -= inv_size_xfade;
+        ++outputBuffer;
+        ++next_sample_index;
+    }
+    
+#ifndef NDEBUG
+    prev_ratio = xfade_ratio;
+#endif
 }
 
 static float triangle( float angle_radians ) {

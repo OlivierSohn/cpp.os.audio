@@ -71,7 +71,7 @@ namespace imajuscule {
     
     struct Request {
         Request( Sounds & sounds, Sound const & sound, float freq_hz, float volume, float duration_ms );
-        
+        Request() = default;
         soundBuffer const * buffer;
         float volume;
         int duration_in_samples;
@@ -84,36 +84,51 @@ namespace imajuscule {
     private:
         
         struct Channel {
+            
+            Channel() : transition_volume_remaining(0) {}
+            
             void step(SAMPLE * outputBuffer, int framesPerBuffer);
             
-            // to play a sound (loop over a waveform) for a given duration
-            struct Playing {
-                int remaining_samples_count = 0;
-                int next_sample_index = 0;
-                soundBuffer const * sound = nullptr;
-                float sound_volume = 0.f;
-                
-                enum { volume_transition_length = 2000 };
-                int transition_volume_remaining = 0;
-                float channel_volume = 1.f;
-                float channel_volume_increments = 0.f;
-                
-                void consume( std::queue<Request> & requests) {
-                    play(requests.front());
-                    requests.pop();
-                }
-                
-                void write(SAMPLE * outputBuffer, int framesPerBuffer);
-            private:
-                void play(Request & r) {
-                    sound = r.buffer;
-                    sound_volume = r.volume;
-                    A(r.duration_in_samples >= 0);
-                    remaining_samples_count = r.duration_in_samples;
-                    next_sample_index = 0;
-                }
-            } playing;
+            static constexpr unsigned int volume_transition_length = 2000;
+            // make sure we'll have no overflow on transition_volume_remaining
+            static_assert(volume_transition_length < (1 << 16), "");
+            unsigned int transition_volume_remaining : 16;
+        private:
+            Request current;
+            int remaining_samples_count = 0;
+            int next_sample_index = 0;
+
+        public:
+            float channel_volume = 1.f;
+            float channel_volume_increments = 0.f;
+        private:
             
+            bool crossfade_from_zero = true;
+            
+            bool consume() {
+                if (requests.empty()) {
+                    return false;
+                }
+                current = requests.front();
+                requests.pop();
+                
+                A(current.duration_in_samples >= 0);
+                remaining_samples_count = current.duration_in_samples;
+                next_sample_index = 0;
+                return true;
+            }
+            
+            void write(SAMPLE * outputBuffer, int framesPerBuffer);
+            void write_crossfading_from_zero(SAMPLE * outputBuffer, float xfade_ratio, int framesPerBuffer);
+            void write_crossfading_to_zero(SAMPLE * outputBuffer, float xfade_ratio, int framesPerBuffer);
+            
+            static constexpr int size_xfade = 200;
+            static constexpr float inv_size_xfade = 1.f / static_cast<float>(size_xfade);
+         
+            int crossfading_from_zero_remaining() const {
+                return size_xfade - (1 + current.duration_in_samples - remaining_samples_count);
+            }
+        public:
             std::queue<Request> requests;
         };
         
