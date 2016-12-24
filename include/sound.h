@@ -107,7 +107,7 @@ namespace imajuscule {
         
         struct Channel {
             
-            Channel() : transition_volume_remaining(0) {}
+            Channel() : transition_volume_remaining(0), next(false) {}
             
             void step(SAMPLE * outputBuffer, int framesPerBuffer);
             
@@ -117,9 +117,8 @@ namespace imajuscule {
             static_assert(volume_transition_length < (1 << 16), "");
             unsigned int transition_volume_remaining : 16;
         private:
-            // todo us a bit for that
-            Request * next = nullptr; // if non null, the current crossfade is between two requests,
-                                      // else the current crossfade is from or to zero
+            bool next : 1; // if false, the current crossfade is between two requests,
+                           // else the current crossfade is from or to zero
             Request current;
             Request previous;
             int remaining_samples_count = 0;
@@ -137,7 +136,7 @@ namespace imajuscule {
                 previous = current;
                 A(remaining_samples_count == 0);
                 if (requests.empty()) {
-                    A(nullptr == next); // because we have started the crossfade and have detected that there is no more requests to process
+                    A(!next); // because we have started the crossfade and have detected that there is no more requests to process
                     if(!current.buffer) {
                         return false;
                     }
@@ -182,6 +181,34 @@ namespace imajuscule {
                 else {
                     return (size_xfade-1) - (current.duration_in_samples - remaining_samples_count);
                 }
+            }
+            
+            void onBeginToZero() {
+                if((next = !requests.empty())) {
+                    int sz_buffer = static_cast<int>(requests.front().buffer->values.size());
+                    previous_next_sample_index = ( sz_buffer - 1 - size_half_xfade) % sz_buffer;
+                    if(previous_next_sample_index < 0) {
+                        previous_next_sample_index += sz_buffer;
+                    }
+                    A(previous_next_sample_index >= 0);
+                }
+            }
+            
+            bool handleToZero(SAMPLE *& outputBuffer, int & n_max_writes) {
+                if(remaining_samples_count == size_half_xfade + 1) {
+                    onBeginToZero();
+                }
+                auto xfade_ratio = 0.5f + 0.5f* (float)(remaining_samples_count-1) * inv_half_size_xfade;
+                auto xfade_written = std::min(remaining_samples_count, n_max_writes);
+                write_crossfading_to_zero( outputBuffer, xfade_ratio, xfade_written );
+                n_max_writes -= xfade_written;
+                remaining_samples_count -= xfade_written;
+                if(n_max_writes <= 0) {
+                    return false;
+                }
+                outputBuffer += xfade_written;
+                A(remaining_samples_count == 0); // we are sure the xfade is finished
+                return consume();
             }
         public:
             std::queue<Request> requests;
