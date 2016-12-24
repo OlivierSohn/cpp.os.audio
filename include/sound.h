@@ -118,12 +118,12 @@ namespace imajuscule {
             unsigned int transition_volume_remaining : 16;
         private:
             bool next : 1; // if false, the current crossfade is between two requests,
-                           // else the current crossfade is from or to zero
+                           // else the current crossfade is from or to 'empty'
             Request current;
             Request previous;
             int remaining_samples_count = 0;
-            int next_sample_index = 0;
-            int previous_next_sample_index = 0;
+            int current_next_sample_index = 0;
+            int other_next_sample_index = 0;
 
         public:
             float channel_volume = 1.f;
@@ -140,17 +140,17 @@ namespace imajuscule {
                     if(!current.buffer) {
                         return false;
                     }
-                    // emulate a "from zero" xfade
+                    // emulate a right xfade 'to zero'
                     current.reset();
-                    current.duration_in_samples = size_xfade-1; // to do the "from zero" writes
-                    remaining_samples_count = size_half_xfade;  // to do the "from zero" writes
-                    next_sample_index = 0;
-                    previous_next_sample_index = 0;
+                    current.duration_in_samples = size_xfade-1; // to do the right xfade
+                    remaining_samples_count = size_half_xfade;  // to do the right xfade
+                    current_next_sample_index = 0;
+                    other_next_sample_index = 0;
                 }
                 else if(!next && !current.buffer) {
-                    // emulate a "to zero" xfade
-                    current.duration_in_samples = 2 * size_xfade; // to skip the "from zero" writes
-                    remaining_samples_count = size_half_xfade + 1; // to skip the "normal" writes and begin the "to zero" phase
+                    // emulate a left xfade 'from zero'
+                    current.duration_in_samples = 2 * size_xfade; // to skip the right xfade
+                    remaining_samples_count = size_half_xfade + 1; // to skip the normal writes and begin the left xfade
                 }
                 else {
                     current = requests.front();
@@ -158,15 +158,24 @@ namespace imajuscule {
                     
                     A(current.duration_in_samples >= 0);
                     remaining_samples_count = current.duration_in_samples;
-                    next_sample_index = 0;
-                    previous_next_sample_index = 0;
+                    current_next_sample_index = 0;
+                    other_next_sample_index = 0;
                 }
                 return true;
             }
             
             void write(SAMPLE * outputBuffer, int framesPerBuffer);
-            void write_crossfading_from_zero(SAMPLE * outputBuffer, float xfade_ratio, int framesPerBuffer);
-            void write_crossfading_to_zero(SAMPLE * outputBuffer, float xfade_ratio, int framesPerBuffer);
+            void write_xfade_right(SAMPLE * outputBuffer, float xfade_ratio, int const framesPerBuffer);
+            void write_xfade_left(SAMPLE * outputBuffer, float xfade_ratio, int const framesPerBuffer);
+
+            void write_value(SAMPLE const val, SAMPLE *& outputBuffer) {
+                if( transition_volume_remaining ) {
+                    transition_volume_remaining--;
+                    channel_volume += channel_volume_increments;
+                }
+                *outputBuffer += amplitude * channel_volume * val;
+                ++outputBuffer;
+            }
             
             static_assert( 1 == size_xfade % 2, "");
             static constexpr int size_half_xfade = (size_xfade-1) / 2;
@@ -186,11 +195,11 @@ namespace imajuscule {
             void onBeginToZero() {
                 if((next = !requests.empty())) {
                     int sz_buffer = static_cast<int>(requests.front().buffer->values.size());
-                    previous_next_sample_index = ( sz_buffer - 1 - size_half_xfade) % sz_buffer;
-                    if(previous_next_sample_index < 0) {
-                        previous_next_sample_index += sz_buffer;
+                    other_next_sample_index = ( sz_buffer - 1 - size_half_xfade) % sz_buffer;
+                    if(other_next_sample_index < 0) {
+                        other_next_sample_index += sz_buffer;
                     }
-                    A(previous_next_sample_index >= 0);
+                    A(other_next_sample_index >= 0);
                 }
             }
             
@@ -200,7 +209,7 @@ namespace imajuscule {
                 }
                 auto xfade_ratio = 0.5f + 0.5f* (float)(remaining_samples_count-1) * inv_half_size_xfade;
                 auto xfade_written = std::min(remaining_samples_count, n_max_writes);
-                write_crossfading_to_zero( outputBuffer, xfade_ratio, xfade_written );
+                write_xfade_left( outputBuffer, xfade_ratio, xfade_written );
                 n_max_writes -= xfade_written;
                 remaining_samples_count -= xfade_written;
                 if(n_max_writes <= 0) {
