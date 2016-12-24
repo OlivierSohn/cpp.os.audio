@@ -1,35 +1,10 @@
 namespace imajuscule {
     
-    enum Note : unsigned char{
-        NOTE_ERROR,
-        Do,
-        Dod,
-        Re,
-        Red,
-        Mi,
-        Fa,
-        Fad,
-        Sol,
-        Sold,
-        La,
-        Lad,
-        Si,
-    };
-    
     namespace {
-        constexpr float half_tone = 1.059463094359295f; // powf(2.f, 1.f/12.f);
-        constexpr float freq_do = 200.f;
         
-        constexpr float to_freq(Note n) {
-            auto diff = static_cast<int>(n) - static_cast<int>(Do);
-            if(diff == 0) {
-                return freq_do;
-            }
-//            diff = 12;
-            return freq_do * powf(half_tone, static_cast<float>(diff));
-        }
         Note parse(Note note, std::string const & str, size_t pos) {
             A(note != NOTE_ERROR);
+            A(note != Silence);
             if(str.size() <= pos) {
                 return note;
             }
@@ -85,10 +60,11 @@ namespace imajuscule {
         }
         
         struct NoteAlgo {
-            NoteAlgo(float time_unit) : time_unit(time_unit) {}
             
             bool run(std::string const & score) {
-                requests.reserve(score.size() / 3);
+                resetCurrent();
+
+                notespecs.reserve(score.size() / 3); // a note takes approximately 3 chars in a score
                 
                 size_t pos = 0;
                 while(pos < score.size()) {
@@ -96,26 +72,20 @@ namespace imajuscule {
                     if(next == pos) {
                         switch(score[pos]) {
                             case ' ':
-                                if(!make_note()) {
-                                    return false;
-                                }
                                 break;
                             case '.':
-                                if(current != NOTE_ERROR) {
+                                if(current.note != Silence) {
                                     if(!make_note()) {
                                         return false;
                                     }
                                 }
-                                if(!make_silence() ) {
-                                    return false;
+                                else {
+                                    current.note = Silence;
                                 }
+                                ++ current.duration;
                                 break;
                             case '-':
-                                if(current == NOTE_ERROR) {
-                                    LG(ERR, "found no note before '-'");
-                                    return false;
-                                }
-                                ++duration;
+                                ++ current.duration;
                                 break;
                             default:
                                 A(0);
@@ -125,81 +95,69 @@ namespace imajuscule {
                         ++pos;
                     }
                     else {
-                        if(current != NOTE_ERROR) {
-                            if(!make_note()) {
-                                return false;
-                            }
+                        if(!make_pending()) {
+                            return false;
                         }
                         auto str = score.substr(pos, next-pos);
                         pos = next;
                         if(str.empty()) {
                             return false;
                         }
-                        accent = isupper(str[0]);
-                        current = parseNote(std::move(str));
-                        if(current == NOTE_ERROR) {
+                        A(current.duration == 0);
+                        current.loud = isupper(str[0]);
+                        current.note = parseNote(std::move(str));
+                        if(current.note == NOTE_ERROR) {
                             return false;
                         }
+                        current.duration = 1;
                         // do not include the note yet, we need to know how long it will last
                     }
                 }
                 
-                if(current != NOTE_ERROR) {
-                    if(!make_note()) {
-                        return false;
-                    }
-                }
-
-                return true;
+                return make_pending();
             }
             
-            std::vector<Request> requests;
+            std::vector<NoteSpec> notespecs;
         private:
-            Note current = NOTE_ERROR, previous = NOTE_ERROR;
-            int duration = 1;
-            bool accent = false;
-            float time_unit;
+            NoteSpec current;
+            
+            bool make_pending() {
+                if(current.duration == 0) {
+                    return true;
+                }
+                if(current.note == Silence) {
+                    return make_silence();
+                }
+                return make_note();
+            }
             
             bool make_note() {
-                if(current == NOTE_ERROR) {
+                if(current.note == NOTE_ERROR) {
                     LG(ERR, "note is error");
                     return false;
                 }
-                auto a = Audio::getInstance();
-                if(!a) {
-                    LG(ERR, "no audio");
+                if(current.note == Silence) {
+                    LG(ERR, "note is silence");
                     return false;
                 }
-                
-                requests.emplace_back(a->out().editSounds(),
-                                      Sound::SINE,
-                                      to_freq(current),
-                                      accent? 2.f : 1.f,
-                                      time_unit * (float)duration);
-                
-                accent = false;
-                duration = 1;
-                current = NOTE_ERROR;
+                notespecs.emplace_back(current);
+                resetCurrent();
                 return true;
             }
             
             bool make_silence() {
-                A(duration == 1);
-                A(current == NOTE_ERROR);
-                auto a = Audio::getInstance();
-                if(!a) {
-                    LG(ERR, "no audio");
-                    return false;
-                }
-                
-                requests.emplace_back(a->out().editSounds(),
-                                      Sound::SILENCE,
-                                      0.f,
-                                      0.f,
-                                      time_unit * (float)duration);
+                A(current.note == Silence);
+                notespecs.emplace_back(current);
+                resetCurrent();
                 return true;
             }
             
+            void resetCurrent()
+            {
+                current.note = Silence;
+                current.duration = 0;
+                current.loud = false;
+            }
         };
         
         void normalize(std::string & score) {
@@ -212,13 +170,13 @@ namespace imajuscule {
         }
     }
     
-    std::vector<Request> parseMusic(std::string score, float time_unit) {
+    std::vector<NoteSpec> parseMusic(std::string score) {
         normalize(score);
-        NoteAlgo a(time_unit);
+        NoteAlgo a;
         if( !a.run(std::move(score))) {
             LG(ERR, "not all music could be parsed");
         }
-        return std::move(a.requests);
+        return std::move(a.notespecs);
     }
     
 }

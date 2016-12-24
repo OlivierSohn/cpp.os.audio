@@ -2,4 +2,6 @@
 
 #include "os.audio.cpp"
 #include "sound.cpp"
+#include "request.cpp"
+#include "out.cpp"
 #include "parse.music.cpp"

@@ -29,6 +29,11 @@
 		09C645AC1E0ADC9800153C61 /* sound.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = sound.h; path = include/sound.h; sourceTree = "<group>"; };
 		09C645AD1E0ADCEE00153C61 /* parse.music.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = parse.music.h; path = include/parse.music.h; sourceTree = "<group>"; };
 		09C645AF1E0ADD6900153C61 /* sound.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = sound.cpp; path = source/sound.cpp; sourceTree = "<group>"; };
+		09C645B21E0EC84D00153C61 /* out.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = out.h; path = include/out.h; sourceTree = "<group>"; };
+		09C645B31E0EC8A200153C61 /* out.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = out.cpp; path = source/out.cpp; sourceTree = "<group>"; };
+		09C645B41E0EC98300153C61 /* request.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = request.h; path = include/request.h; sourceTree = "<group>"; };
+		09C645B51E0ECBBF00153C61 /* note.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = note.h; path = include/note.h; sourceTree = "<group>"; };
+		09C645B71E0ED37000153C61 /* request.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = request.cpp; path = source/request.cpp; sourceTree = "<group>"; };
 		09C84A441C271D95002CF5B7 /* osx.debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = osx.debug.xcconfig; sourceTree = "<group>"; };
 		09C84A451C271D95002CF5B7 /* ios.debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = ios.debug.xcconfig; sourceTree = "<group>"; };
 		09C84A461C271D95002CF5B7 /* ios.release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = ios.release.xcconfig; sourceTree = "<group>"; };
@@ -103,8 +108,10 @@
 			isa = PBXGroup;
 			children = (
 				09E7B1301BB5CA01007BAA5F /* os.audio.cpp */,
+				09C645B31E0EC8A200153C61 /* out.cpp */,
 				09C645AB1E0A9E4200153C61 /* parse.music.cpp */,
 				09CA7B2A1E05A27C00E9CDF3 /* private.h */,
+				09C645B71E0ED37000153C61 /* request.cpp */,
 				09C645AF1E0ADD6900153C61 /* sound.cpp */,
 				097835661D57B0EA00E47ED3 /* unity.build.cpp */,
 			);
@@ -114,9 +121,12 @@
 		09E7B1351BB5CA30007BAA5F /* include */ = {
 			isa = PBXGroup;
 			children = (
+				09C645B51E0ECBBF00153C61 /* note.h */,
 				09E7B1331BB5CA29007BAA5F /* os.audio.h */,
+				09C645B21E0EC84D00153C61 /* out.h */,
 				09C645AD1E0ADCEE00153C61 /* parse.music.h */,
 				09CA7B291E05A25600E9CDF3 /* public.h */,
+				09C645B41E0EC98300153C61 /* request.h */,
 				09C645AC1E0ADC9800153C61 /* sound.h */,
 			);
 			name = include;
