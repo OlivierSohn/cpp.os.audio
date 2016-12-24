@@ -49,8 +49,7 @@ uint8_t outputData::openChannel() {
 bool outputData::closeChannel(uint8_t channel_id) {
     RAIILock l(used);
     
-    std::queue<Request> empty;
-    editChannel(channel_id).requests.swap(empty);
+    editChannel(channel_id).clear();
     available_ids.Return(channel_id);
     return channels.empty();
 }
@@ -60,7 +59,7 @@ void outputData::play( uint8_t channel_id, std::vector<Request> && v ) {
     
     auto & c = editChannel(channel_id);
     for( auto & sound : v ) {
-        c.requests.emplace( std::move(sound) );
+        c.addRequest( std::move(sound) );
     }
 }
 
@@ -84,8 +83,7 @@ void outputData::step(SAMPLE *outputBuffer, int framesPerBuffer) {
     
     // apply the effect
     for( auto & delay : delays ) {
-        // deactivated on purpose : reactivate once we have cross fade
-        // to see if it is ok, else need to low pass filtered
+        // deactivated on purpose : reactivate once low pass filtered
         //delay.step(outputBuffer, framesPerBuffer);
     }
 }
@@ -198,7 +196,7 @@ void outputData::Channel::step(SAMPLE * outputBuffer, int n_max_writes)
 void outputData::Channel::write(SAMPLE * outputBuffer, int const n_writes) {
     A(n_writes > 0);
 //    LG(INFO, "write %d", n_writes);
-    auto s = (int) current.buffer->values.size();
+    auto const s = (int) current.buffer->values.size();
     auto const a = amplitude * current.volume;
     for( int i=0; i<n_writes; i++ ) {
         if( current_next_sample_index == s ) {
@@ -225,9 +223,9 @@ void outputData::Channel::write_xfade_right(SAMPLE * outputBuffer, float xfade_r
     A(xfade_ratio <= 1.f);
 
     // note that next points probably to deallocated memory but it's ok we don't dereference it
-    auto * other_buffer = (next || !current.buffer) ? previous.buffer : nullptr; // only end crossfade with other if we started with him
-    int other_s = other_buffer? (int)other_buffer->values.size() : 0;
-    int s = current.buffer ? (int) current.buffer->values.size() : 0;
+    auto const * other_buffer = (next || !current.buffer) ? previous.buffer : nullptr; // only end crossfade with other if we started with him
+    int const other_s = other_buffer? (int)other_buffer->values.size() : 0;
+    int const s = current.buffer ? (int) current.buffer->values.size() : 0;
     for( int i=0; i<n_writes; i++ ) {
         auto val = 0.f;
         if(s) {
@@ -261,8 +259,8 @@ void outputData::Channel::write_xfade_left(SAMPLE * outputBuffer, float xfade_ra
     A(xfade_ratio >= 0.f);
     A(xfade_ratio <= 1.f);
     auto * other = next ? &requests.front() : nullptr;
-    int other_s = other? static_cast<int>(other->buffer->values.size()) : 0;
-    auto s = current.buffer ? (int) current.buffer->values.size() : 0;
+    int const other_s = other? static_cast<int>(other->buffer->values.size()) : 0;
+    int const s = current.buffer ? (int) current.buffer->values.size() : 0;
     for( int i=0; i<n_writes; i++ ) {
         auto val = 0.f;
         if(s) {

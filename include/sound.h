@@ -26,6 +26,7 @@ class AudioTest_Xfade_consecutive_sounds_Test;
 class AudioTest_Xfade_from_empty_Test;
 class AudioTest_Xfade_to_empty_Test;
 class AudioTest_Compare_silence_empty_Test;
+class AudioTest_Validate_request_size_Test;
 
 namespace imajuscule {
     
@@ -100,6 +101,7 @@ namespace imajuscule {
         friend class ::AudioTest_Xfade_from_empty_Test;
         friend class ::AudioTest_Xfade_to_empty_Test;
         friend class ::AudioTest_Compare_silence_empty_Test;
+        friend class ::AudioTest_Validate_request_size_Test;
 
         static constexpr float amplitude = 0.1f; // ok to have 10 chanels at max amplitude at the same time
 
@@ -128,6 +130,19 @@ namespace imajuscule {
         public:
             float channel_volume = 1.f;
             float channel_volume_increments = 0.f;
+            
+            bool addRequest(Request && r) {
+                if(r.duration_in_samples < 2*size_xfade) {
+                    return false;
+                }
+                requests.emplace(std::move(r));
+                return true;
+            }
+            
+            void clear() {
+                std::queue<Request> empty;
+                requests.swap(empty);
+            }
         private:
             
             bool crossfade_from_zero = true;
@@ -219,7 +234,7 @@ namespace imajuscule {
                 A(remaining_samples_count == 0); // we are sure the xfade is finished
                 return consume();
             }
-        public:
+            
             std::queue<Request> requests;
         };
         
