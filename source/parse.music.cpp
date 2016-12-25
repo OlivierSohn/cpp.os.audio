@@ -64,7 +64,7 @@ namespace imajuscule {
             bool run(std::string const & score) {
                 resetCurrent();
 
-                notespecs.reserve(score.size() / 3); // a note takes approximately 3 chars in a score
+                notespecs.reserve(score.size());
                 
                 size_t pos = 0;
                 while(pos < score.size()) {
@@ -117,7 +117,7 @@ namespace imajuscule {
                 return make_pending();
             }
             
-            std::vector<NoteSpec> notespecs;
+            pool::vector<NoteSpec> notespecs;
         private:
             NoteSpec current;
             
@@ -170,7 +170,7 @@ namespace imajuscule {
         }
     }
     
-    std::vector<NoteSpec> parseMusic(std::string score) {
+    pool::vector<NoteSpec> parseMusic(std::string score) {
         normalize(score);
         NoteAlgo a;
         if( !a.run(std::move(score))) {

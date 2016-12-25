@@ -181,7 +181,7 @@ namespace imajuscule {
         // called from main thread
         uint8_t openChannel(float volume);
         Channel & editChannel(uint8_t id) { return channels[id]; }
-        void play( uint8_t channel_id, std::vector<Request> && );
+        void play( uint8_t channel_id, pool::vector<Request> && );
         void setVolume( uint8_t channel_id, float vol );
         bool closeChannel(uint8_t channel_id);
     };    
