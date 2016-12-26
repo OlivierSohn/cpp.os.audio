@@ -17,22 +17,59 @@ void DelayLine::step(SAMPLE *outputBuffer, int framesPerBuffer) {
 }
 
 outputData::outputData() : delays{{1000, 0.6f},{4000, 0.2f}, {4300, 0.3f}, {5000, 0.1f}} {
+    // to avoid reallocations when we hold the lock
+    // we allocate all we need for channel management now:
+    channels.reserve(std::numeric_limits<uint8_t>::max());
+    autoclosing_ids.reserve(std::numeric_limits<uint8_t>::max());
+    available_ids.reserve(std::numeric_limits<uint8_t>::max());
 }
 
-uint8_t outputData::openChannel(float volume) {
-    RAIILock l(used);
-    
-    auto index = available_ids.Take(channels);
-    A(index != AUDIO_CHANNEL_NONE); // now channel vector is full!
-    editChannel(index).channel_volume = volume;
-    
-    return index;
+uint8_t outputData::openChannel(float volume, ChannelLifeCycle l) {
+    uint8_t id = AUDIO_CHANNEL_NONE;
+    if(channels.size() == std::numeric_limits<uint8_t>::max() && available_ids.size() == 0) {
+        // Channels are at their maximum number and all are used...
+        // Let's find one that is autoclosing and not playing :
+        for( auto it = autoclosing_ids.begin(), end = autoclosing_ids.end(); it != end; ++it )
+        {
+            id = *it;
+            {
+                // take the lock in the loop so that at the end of each iteration
+                // the audio thread has a chance to lock
+                RAIILock l(used);
+                if(channels[id].isPlaying()) {
+                    continue;
+                }
+            }
+            // channel 'id' is auto closing and not playing, so we will assign it to the caller.
+            if(l != AutoClosing) {
+                autoclosing_ids.erase(it);
+            }
+            break;
+        }
+    }
+    else {
+        id = available_ids.Take(channels);
+        if(l == AutoClosing) {
+            autoclosing_ids.push_back(id);
+            A(autoclosing_ids.size() <= std::numeric_limits<uint8_t>::max());
+            // else logic error : some users closed manually some autoclosing channels
+        }
+    }
+    // no need to lock here : the channel is not active
+    editChannel(id).channel_volume = volume;
+    A(id != AUDIO_CHANNEL_NONE);
+    return id;
 }
 
 bool outputData::closeChannel(uint8_t channel_id) {
-    RAIILock l(used);
-    
-    editChannel(channel_id).clear();
+    // we could
+    // - transform the channel into an autoclosing channel
+    // - clear the queue (except the first element in case it is crossfading)
+    // to stop playing "as soon as possible but without generating undesirable clics"
+    {
+        RAIILock l(used);
+        editChannel(channel_id).clear();
+    }
     available_ids.Return(channel_id);
     return channels.empty();
 }

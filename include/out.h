@@ -18,6 +18,11 @@ namespace imajuscule {
     // reserved number to indicate "no channel"
     static constexpr auto AUDIO_CHANNEL_NONE = std::numeric_limits<uint8_t>::max();
     
+    enum ChannelLifeCycle {
+        AutoClosing,
+        Manual,
+    };
+    
     struct outputData {
         friend class ::AudioTest_Xfade_consecutive_sounds_Test;
         friend class ::AudioTest_Xfade_from_empty_Test;
@@ -40,7 +45,7 @@ namespace imajuscule {
             static constexpr unsigned int volume_transition_length = 2000;
             // make sure we'll have no overflow on transition_volume_remaining
             static_assert(volume_transition_length < (1 << 16), "");
-            unsigned int transition_volume_remaining : 16;
+            uint16_t transition_volume_remaining;
         private:
             bool next : 1; // if false, the current crossfade is between two requests,
                            // else the current crossfade is from or to 'empty'
@@ -66,9 +71,11 @@ namespace imajuscule {
                 std::queue<Request> empty;
                 requests.swap(empty);
             }
-        private:
             
-            bool crossfade_from_zero = true;
+            bool isPlaying() const {
+                return remaining_samples_count != 0 || !requests.empty() || current.buffer;
+            }
+        private:
             
             bool consume() {
                 previous = current;
@@ -161,10 +168,10 @@ namespace imajuscule {
             std::queue<Request> requests;
         };
         
-        static uint8_t take_available_id();
+        std::atomic_bool used { false }; // maybe we need two level of locks, one here for the vector and many inside for the elements
         AvailableIndexes<uint8_t> available_ids;
         std::vector<Channel> channels;
-        std::atomic_bool used { false }; // maybe we need two level of locks, one here for the vector and many inside for the elements
+        std::vector<uint8_t> autoclosing_ids;
         
     public:
         outputData();
@@ -179,7 +186,7 @@ namespace imajuscule {
 #endif
         
         // called from main thread
-        uint8_t openChannel(float volume);
+        uint8_t openChannel(float volume, ChannelLifeCycle);
         Channel & editChannel(uint8_t id) { return channels[id]; }
         void play( uint8_t channel_id, pool::vector<Request> && );
         void setVolume( uint8_t channel_id, float vol );
