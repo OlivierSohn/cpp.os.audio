@@ -24,7 +24,7 @@ outputData::outputData() : delays{{1000, 0.6f},{4000, 0.2f}, {4300, 0.3f}, {5000
     available_ids.reserve(std::numeric_limits<uint8_t>::max());
 }
 
-uint8_t outputData::openChannel(float volume, ChannelLifeCycle l) {
+uint8_t outputData::openChannel(float volume, ChannelClosingPolicy l) {
     uint8_t id = AUDIO_CHANNEL_NONE;
     if(channels.size() == std::numeric_limits<uint8_t>::max() && available_ids.size() == 0) {
         // Channels are at their maximum number and all are used...
@@ -41,7 +41,7 @@ uint8_t outputData::openChannel(float volume, ChannelLifeCycle l) {
                 }
             }
             // channel 'id' is auto closing and not playing, so we will assign it to the caller.
-            if(l != AutoClosing) {
+            if(l != AutoClose) {
                 autoclosing_ids.erase(it);
             }
             break;
@@ -49,7 +49,7 @@ uint8_t outputData::openChannel(float volume, ChannelLifeCycle l) {
     }
     else {
         id = available_ids.Take(channels);
-        if(l == AutoClosing) {
+        if(l == AutoClose) {
             autoclosing_ids.push_back(id);
             A(autoclosing_ids.size() <= std::numeric_limits<uint8_t>::max());
             // else logic error : some users closed manually some autoclosing channels

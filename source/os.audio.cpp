@@ -713,7 +713,7 @@ void Audio::doTearDown() {
     audioIn.TearDown();
 }
 
-uint8_t AudioOut::openChannel(float volume, ChannelLifeCycle channel_lifecycle) {
+uint8_t AudioOut::openChannel(float volume, ChannelClosingPolicy channel_lifecycle) {
     Init();
     return data.openChannel(volume, channel_lifecycle);
 }

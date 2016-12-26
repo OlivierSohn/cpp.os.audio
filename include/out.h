@@ -18,9 +18,13 @@ namespace imajuscule {
     // reserved number to indicate "no channel"
     static constexpr auto AUDIO_CHANNEL_NONE = std::numeric_limits<uint8_t>::max();
     
-    enum ChannelLifeCycle {
-        AutoClosing,
-        Manual,
+    enum ChannelClosingPolicy {
+        AutoClose,  // once the request queue is empty (or more precisely
+                    // once the channel method isPlaying() returns false),
+                    // the channel can be automatically reassigned without
+                    // the need to close it explicitely.
+                    // Explicitely closing an AutoClose channel will result in undefined behaviour.
+        ExplicitClose, // the channel cannot be reassigned unless explicitely closed
     };
     
     struct outputData {
@@ -186,7 +190,7 @@ namespace imajuscule {
 #endif
         
         // called from main thread
-        uint8_t openChannel(float volume, ChannelLifeCycle);
+        uint8_t openChannel(float volume, ChannelClosingPolicy);
         Channel & editChannel(uint8_t id) { return channels[id]; }
         void play( uint8_t channel_id, pool::vector<Request> && );
         void setVolume( uint8_t channel_id, float vol );

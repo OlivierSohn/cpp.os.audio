@@ -209,7 +209,7 @@ namespace imajuscule {
         Sounds sounds;
     public:
         bool Initialized() const { return bInitialized; }
-        uint8_t openChannel(float volume = 1.f, ChannelLifeCycle = Manual);
+        uint8_t openChannel(float volume = 1.f, ChannelClosingPolicy = ExplicitClose);
         void play( uint8_t channel_id, pool::vector<Request> && );
         void setVolume( uint8_t channel_id, float );
         void closeChannel(uint8_t channel_id);
