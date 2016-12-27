@@ -45,7 +45,7 @@ namespace imajuscule {
             A( period_length >= 1 );
         }
         Sound sound;
-        int period_length;
+        int32_t period_length;
         bool operator < (const soundId & other) const {
             if(sound == other.sound) {
                 return ( period_length < other.period_length );

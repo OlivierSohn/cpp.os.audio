@@ -791,12 +791,12 @@ InternalResult FreqFromZC::computeWhileLocked(float & f)
     
     struct algo_freqFromZC
     {
-        range<int> periodRange;
-        int total = 0;
-        int count = 0;
-        int cur=0;
+        range<int32_t> periodRange;
+        int32_t total = 0;
+        int32_t count = 0;
+        int32_t cur=0;
         bool hasStarted = false;
-        std::function<void(int)> step = [this](int interval){
+        std::function<void(int32_t)> step = [this](int32_t interval){
             if(!interval)
                 return;
             
@@ -807,7 +807,7 @@ InternalResult FreqFromZC::computeWhileLocked(float & f)
                 else
                     return;
             }
-            int next = cur + interval;
+            int32_t next = cur + interval;
             if(periodRange.contains(next))
             {
                 total += next;
@@ -831,15 +831,15 @@ InternalResult FreqFromZC::computeWhileLocked(float & f)
 
     struct IntervalRange
     {
-        IntervalRange(int initiator) :
+        IntervalRange(int32_t initiator) :
         initiator_(initiator)
         , count_(1){
             float jitter = ((float)initiator) * 0.15f;
-            int jitter_int = std::max(1, (int)(jitter+0.5f));
+            int32_t jitter_int = std::max(1, (int32_t)(jitter+0.5f));
             r_.set(initiator-jitter_int, initiator+jitter_int);
         }
         
-        bool tryInsert(int val)
+        bool tryInsert(int32_t val)
         {
             if(r_.contains(val))
             {
@@ -848,13 +848,13 @@ InternalResult FreqFromZC::computeWhileLocked(float & f)
             }
             return false;
         }
-        int getCount() const { return count_;}
-        int getInitiator() const { return initiator_;}
-        range<int> const& getRange() const {return r_;}
+        int32_t getCount() const { return count_;}
+        int32_t getInitiator() const { return initiator_;}
+        range<int32_t> const& getRange() const {return r_;}
     private:
-        int initiator_;
-        range<int> r_;
-        int count_;
+        int32_t initiator_;
+        range<int32_t> r_;
+        int32_t count_;
     };
     pool::vector<IntervalRange> ranges;
     ranges.reserve(positive_zeros_dist.size());
@@ -886,7 +886,7 @@ InternalResult FreqFromZC::computeWhileLocked(float & f)
     // ponderate frequency of occurences by initiator value so that 20 20 20 20 30 10 gives 20
     //      and so that 4 4 4 4 8 8 gives 8
     
-    int maxCount = 0;
+    int32_t maxCount = 0;
     for(auto const& r:ranges)
     {
         auto count = r.getCount() * r.getInitiator();
@@ -906,7 +906,7 @@ InternalResult FreqFromZC::computeWhileLocked(float & f)
         // enable result if:
         // all periods were reconstructed from zero-crossing intervals
         // or the signal is loud enough to not be considered noise
-        if(data.count == (int)positive_zeros_dist.size() || delta > upperZero )
+        if(data.count == (int32_t)positive_zeros_dist.size() || delta > upperZero )
         {
             auto candidate = ((float)data.count) / ((float)data.total);
             candidate *= ((float)SAMPLE_RATE)/(float)sampling_period;

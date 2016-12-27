@@ -11,7 +11,7 @@ namespace imajuscule {
         DelayLine(int size, float attenuation);
         void step(SAMPLE * outputBuffer, int framesPerBuffer);
         std::vector<float> delay;
-        int it, end;
+        int32_t it, end;
         float attenuation;
     };
 
@@ -55,9 +55,9 @@ namespace imajuscule {
                            // else the current crossfade is from or to 'empty'
             Request current;
             Request previous;
-            int remaining_samples_count = 0;
-            int current_next_sample_index = 0;
-            int other_next_sample_index = 0;
+            int32_t remaining_samples_count = 0;
+            int32_t current_next_sample_index = 0;
+            int32_t other_next_sample_index = 0;
 
         public:
             float channel_volume = 1.f;

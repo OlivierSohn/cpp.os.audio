@@ -13,6 +13,6 @@ namespace imajuscule {
         
         soundBuffer const * buffer;
         float volume;
-        int duration_in_samples;
+        int32_t duration_in_samples;
     };
 }

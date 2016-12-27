@@ -81,11 +81,11 @@ namespace imajuscule {
             InternalResult compute(float & f);
             
         private:
-            int counter = sampling_period;
+            int32_t counter = sampling_period;
             Filter<float, 1, FilterType::HIGH_PASS> filter_;
             
             cyclic<int> positive_zeros_dist; // zero crossing intervals are recorded over several time steps
-            int acc = 0;
+            int32_t acc = 0;
             bool bWasNeg : 1;
             
             range<float> signal_range; // range is representative of a single time step (except for very first calculation of a series)
