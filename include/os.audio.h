@@ -123,7 +123,7 @@ namespace imajuscule {
         
         struct paTestData
         {
-            enum { sizeSlidingAverage = 160 };
+            static constexpr auto sizeSlidingAverage = 160;
             
             paTestData( Activator & a ) :
             algo_freq(used)
@@ -160,7 +160,7 @@ namespace imajuscule {
             bool do_wakeup() override;
             bool do_sleep() override;
         private:
-            enum { AUDIO_UNUSED_FRAME_COUNT_FOR_SLEEP = 100 };
+            static constexpr auto AUDIO_UNUSED_FRAME_COUNT_FOR_SLEEP = 100;
             AudioIn() : Activator ( AUDIO_UNUSED_FRAME_COUNT_FOR_SLEEP ),
             data( *this ),
             bInitialized_(false)
