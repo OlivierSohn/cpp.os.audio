@@ -279,7 +279,7 @@ void outputData::Channel::write_xfade_left(SAMPLE * outputBuffer, float xfade_ra
     A(xfade_ratio >= 0.f);
     A(xfade_ratio <= 1.f);
     auto * other = next ? &requests.front() : nullptr;
-    int const other_s = other? static_cast<int>(other->buffer->values.size()) : 0;
+    int const other_s = other? safe_cast<int>(other->buffer->values.size()) : 0;
     int const s = current.buffer ? (int) current.buffer->values.size() : 0;
     for( int i=0; i<n_writes; i++ ) {
         auto val = 0.f;

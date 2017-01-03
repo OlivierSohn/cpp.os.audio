@@ -20,14 +20,14 @@ namespace imajuscule {
                     if(note == Si) {
                         return  Do;
                     }
-                    return static_cast<Note>(note + 1);
+                    return safe_cast<Note>(note + 1);
                 case 'b':
                 case 'B':
                 case 'f':
                     if(note == Do) {
                         return Si;
                     }
-                    return static_cast<Note>(note - 1);
+                    return safe_cast<Note>(note - 1);
             }
             LG(ERR, "Note error: '%s' has an unrecognized end character", str.c_str());
             return NOTE_ERROR;
@@ -163,7 +163,7 @@ namespace imajuscule {
         void normalize(std::string & score) {
             for(auto &c : score) {
                 // allow user to write ré or re or RÉ
-                if(c == static_cast<char>(130) /*'é'*/ || c == static_cast<char>(144) /*'É'*/) {
+                if(c == safe_cast<char>(130) /*'é'*/ || c == safe_cast<char>(144) /*'É'*/) {
                     c = 'e';
                 }
             }

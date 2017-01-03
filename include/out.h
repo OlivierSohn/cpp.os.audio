@@ -129,8 +129,8 @@ namespace imajuscule {
             static_assert( 1 == size_xfade % 2, "");
             static constexpr int size_half_xfade = (size_xfade-1) / 2;
             
-            static constexpr float xfade_increment = 1.f / static_cast<float>(size_xfade-1);
-            static constexpr float inv_half_size_xfade = 1.f / static_cast<float>(size_half_xfade);
+            static constexpr float xfade_increment = 1.f / (size_xfade-1);
+            static constexpr float inv_half_size_xfade = 1.f / size_half_xfade;
          
             int crossfading_from_zero_remaining() const {
                 if(next) {
@@ -143,7 +143,7 @@ namespace imajuscule {
             
             void onBeginToZero() {
                 if((next = !requests.empty())) {
-                    int sz_buffer = static_cast<int>(requests.front().buffer->values.size());
+                    int sz_buffer = safe_cast<int>(requests.front().buffer->values.size());
                     other_next_sample_index = ( sz_buffer - 1 - size_half_xfade) % sz_buffer;
                     if(other_next_sample_index < 0) {
                         other_next_sample_index += sz_buffer;
