@@ -210,7 +210,7 @@ namespace imajuscule {
     public:
         bool Initialized() const { return bInitialized; }
         uint8_t openChannel(float volume = 1.f, ChannelClosingPolicy = ExplicitClose);
-        void play( uint8_t channel_id, pool::vector<Request> && );
+        void play( uint8_t channel_id, StaticVector<Request> && );
         void setVolume( uint8_t channel_id, float );
         void closeChannel(uint8_t channel_id);
         

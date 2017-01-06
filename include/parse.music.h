@@ -1,4 +1,4 @@
 
 namespace imajuscule {
-    pool::vector<NoteSpec> parseMusic(std::string score);
+    StaticVector<NoteSpec> parseMusic(std::string score);
 }

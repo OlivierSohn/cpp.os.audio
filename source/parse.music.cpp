@@ -117,7 +117,7 @@ namespace imajuscule {
                 return make_pending();
             }
             
-            pool::vector<NoteSpec> notespecs;
+            StaticVector<NoteSpec> notespecs;
         private:
             NoteSpec current;
             
@@ -170,7 +170,7 @@ namespace imajuscule {
         }
     }
     
-    pool::vector<NoteSpec> parseMusic(std::string score) {
+    StaticVector<NoteSpec> parseMusic(std::string score) {
         normalize(score);
         NoteAlgo a;
         if( !a.run(std::move(score))) {

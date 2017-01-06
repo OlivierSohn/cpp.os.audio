@@ -723,7 +723,7 @@ void AudioOut::closeChannel( uint8_t id ) {
     }
 }
 
-void AudioOut::play( uint8_t channel_id, pool::vector<Request> && v ) {
+void AudioOut::play( uint8_t channel_id, StaticVector<Request> && v ) {
     data.play( channel_id, std::move( v ) );
 }
 
@@ -760,7 +760,7 @@ static void plot(const char*title,const std::vector<SAMPLE>&v)
     
     const int vSteps = 10;
     
-    pool::vector<std::string> vs(vSteps, s);
+    std::vector<std::string> vs(vSteps, s);
     int i=0;
     for(auto e:v)
     {
@@ -856,8 +856,7 @@ InternalResult FreqFromZC::computeWhileLocked(float & f)
         range<int32_t> r_;
         int32_t count_;
     };
-    pool::vector<IntervalRange> ranges;
-    ranges.reserve(positive_zeros_dist.size());
+    StaticVector<IntervalRange> ranges(positive_zeros_dist.size());
     
     auto it = positive_zeros_dist.begin();
     auto end = positive_zeros_dist.end();
