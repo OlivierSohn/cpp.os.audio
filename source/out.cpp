@@ -27,7 +27,7 @@ outputData::outputData() : delays{{1000, 0.6f},{4000, 0.2f}, {4300, 0.3f}, {5000
     available_ids.reserve(std::numeric_limits<uint8_t>::max());
 }
 
-uint8_t outputData::openChannel(float volume, ChannelClosingPolicy l) {
+uint8_t outputData::openChannel(channelVolumes volume, ChannelClosingPolicy l) {
     uint8_t id = AUDIO_CHANNEL_NONE;
     if(channels.size() == std::numeric_limits<uint8_t>::max() && available_ids.size() == 0) {
         // Channels are at their maximum number and all are used...
@@ -59,7 +59,9 @@ uint8_t outputData::openChannel(float volume, ChannelClosingPolicy l) {
         }
     }
     // no need to lock here : the channel is not active
-    editChannel(id).channel_volume = volume;
+    for(auto i=0; i<nAudioOut; ++i) {
+        editChannel(id).volumes[i].current = volume[i];
+    }
     A(id != AUDIO_CHANNEL_NONE);
     return id;
 }
@@ -86,10 +88,12 @@ void outputData::play( uint8_t channel_id, StaticVector<Request> && v ) {
     }
 }
 
-void outputData::setVolume(uint8_t channel_id, float vol) {
+void outputData::setVolume(uint8_t channel_id, channelVolumes volumes) {
     auto & c = editChannel(channel_id);
-    c.transition_volume_remaining = Channel::volume_transition_length;
-    c.channel_volume_increments = (vol - c.channel_volume) / (float) Channel::volume_transition_length;
+    c.volume_transition_remaining = Channel::volume_transition_length;
+    for(int i=0; i<nAudioOut; ++i) {
+        c.volumes[i].increments = (volumes[i] - c.volumes[i].current) / (float) Channel::volume_transition_length;
+    }
 }
 
 void outputData::step(SAMPLE *outputBuffer, int framesPerBuffer) {
@@ -227,14 +231,16 @@ void outputData::Channel::write(SAMPLE * outputBuffer, int const n_writes) {
         }
         A(current_next_sample_index < s);
         
-        if( transition_volume_remaining ) {
-            transition_volume_remaining--;
-            channel_volume += channel_volume_increments;
-        }
         A(crossfading_from_zero_remaining() <= 0);
-        auto val = a * channel_volume * current.buffer->values[current_next_sample_index];
+        auto val = a * current.buffer->values[current_next_sample_index];
+        if( volume_transition_remaining ) {
+            volume_transition_remaining--;
+            for(auto i=0; i<nAudioOut; ++i) {
+                volumes[i].current += volumes[i].increments;
+            }
+        }
         for(auto i=0; i<nAudioOut; ++i) {
-            *outputBuffer += val;
+            *outputBuffer += val * volumes[i].current;
             ++outputBuffer;
         }
         ++current_next_sample_index;

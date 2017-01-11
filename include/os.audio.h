@@ -209,9 +209,9 @@ namespace imajuscule {
         Sounds sounds;
     public:
         bool Initialized() const { return bInitialized; }
-        uint8_t openChannel(float volume = 1.f, ChannelClosingPolicy = ExplicitClose);
+        uint8_t openChannel(channelVolumes = {{1.f}}, ChannelClosingPolicy = ExplicitClose);
         void play( uint8_t channel_id, StaticVector<Request> && );
-        void setVolume( uint8_t channel_id, float );
+        void setVolume( uint8_t channel_id, channelVolumes );
         void closeChannel(uint8_t channel_id);
         
         Sounds & editSounds() { return sounds; }

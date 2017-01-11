@@ -7,7 +7,7 @@ class AudioTest_Compare_silence_empty_Test;
 class AudioTest_Validate_request_size_Test;
 
 namespace imajuscule {
-    constexpr unsigned int nAudioOut = 1; // note that on some systems, if there is only one output portaudio may refuse to open the stream
+    constexpr unsigned int nAudioOut = 2; // note that on some systems, if there is only one output portaudio may refuse to open the stream
 
     struct DelayLine {
         DelayLine(int size, float attenuation);
@@ -19,6 +19,24 @@ namespace imajuscule {
 
     // reserved number to indicate "no channel"
     static constexpr auto AUDIO_CHANNEL_NONE = std::numeric_limits<uint8_t>::max();
+    
+    using channelVolumes = std::array<float, nAudioOut>;
+    
+    struct MakeVolume {
+        template<int J = nAudioOut>
+        static
+        typename std::enable_if<J == 1, typename std::array<float, J>>::type
+        run(float volume, float left, float right) {
+            return {{volume}};
+        }
+        
+        template<int J = nAudioOut>
+        static
+        typename std::enable_if<J == 2, typename std::array<float, J>>::type
+        run(float volume, float left, float right) {
+            return {{left*volume, right*volume}};
+        }
+    };
     
     enum ChannelClosingPolicy {
         AutoClose,  // once the request queue is empty (or more precisely
@@ -43,15 +61,15 @@ namespace imajuscule {
         struct Channel {
             
             Channel() :
-            transition_volume_remaining(0), next(false) {}
+            volume_transition_remaining(0), next(false) {}
             
             void step(SAMPLE * outputBuffer, int framesPerBuffer);
             
             static constexpr int size_xfade = 201;
             static constexpr unsigned int volume_transition_length = 2000;
-            // make sure we'll have no overflow on transition_volume_remaining
+            // make sure we'll have no overflow on volume_transition_remaining
             static_assert(volume_transition_length < (1 << 16), "");
-            uint16_t transition_volume_remaining;
+            uint16_t volume_transition_remaining;
         private:
             bool next : 1; // if false, the current crossfade is between two requests,
                            // else the current crossfade is from or to 'empty'
@@ -62,8 +80,11 @@ namespace imajuscule {
             int32_t other_next_sample_index = 0;
 
         public:
-            float channel_volume = 1.f;
-            float channel_volume_increments = 0.f;
+            struct Volume {
+                float current = 1.f;
+                float increments = 0.f;
+            };
+            std::array<Volume, nAudioOut> volumes;
             
             bool addRequest(Request r) {
                 if(r.duration_in_samples < 2*size_xfade) {
@@ -120,13 +141,15 @@ namespace imajuscule {
             void write_xfade_left(SAMPLE * outputBuffer, float xfade_ratio, int const framesPerBuffer);
 
             void write_value(SAMPLE val, SAMPLE *& outputBuffer) {
-                if( transition_volume_remaining ) {
-                    transition_volume_remaining--;
-                    channel_volume += channel_volume_increments;
+                if( volume_transition_remaining ) {
+                    volume_transition_remaining--;
+                    for(auto i=0; i<nAudioOut; ++i) {
+                        volumes[i].current += volumes[i].increments;
+                    }
                 }
-                val *= amplitude * channel_volume;
+                val *= amplitude;
                 for(auto i=0; i<nAudioOut; ++i) {
-                    *outputBuffer += val;
+                    *outputBuffer += val * volumes[i].current;
                     ++outputBuffer;
                 }
             }
@@ -195,10 +218,10 @@ namespace imajuscule {
 #endif
         
         // called from main thread
-        uint8_t openChannel(float volume, ChannelClosingPolicy);
+        uint8_t openChannel(channelVolumes volume, ChannelClosingPolicy);
         Channel & editChannel(uint8_t id) { return channels[id]; }
         void play( uint8_t channel_id, StaticVector<Request> && );
-        void setVolume( uint8_t channel_id, float vol );
+        void setVolume( uint8_t channel_id, channelVolumes );
         bool closeChannel(uint8_t channel_id);
     };    
 }
