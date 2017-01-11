@@ -24,7 +24,7 @@ namespace imajuscule {
     };
    
     constexpr float half_tone = 1.059463094359295f; // powf(2.f, 1.f/12.f);
-    constexpr float freq_do = 200.f;
+    constexpr float freq_do = 261.64f;
     
     constexpr float to_freq(Note n) {
         auto diff = static_cast<int>(n) - static_cast<int>(Do);
