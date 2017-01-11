@@ -11,6 +11,9 @@ volume(volume)
     
     if( sound.zeroOnPeriodBoundaries() ) {
         const int period_size = (int)buffer->values.size();
+        if(period_size == 0) {
+            return;
+        }
         
         const int mod = duration_in_samples % period_size;
         if(mod) {

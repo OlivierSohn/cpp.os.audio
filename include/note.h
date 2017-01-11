@@ -23,10 +23,13 @@ namespace imajuscule {
         unsigned int duration : 7; // max. 128
     };
    
-    constexpr float half_tone = 1.059463094359295f; // powf(2.f, 1.f/12.f);
+    static inline float compute_half_tone(float stretch) {
+        return powf(2.f, stretch/12.f);
+    }
+    
     constexpr float freq_do = 261.64f;
     
-    constexpr float to_freq(Note n) {
+    constexpr float to_freq(Note n, float half_tone) {
         auto diff = static_cast<int>(n) - static_cast<int>(Do);
         if(diff == 0) {
             return freq_do;
@@ -34,7 +37,7 @@ namespace imajuscule {
         return freq_do * powf(half_tone, static_cast<float>(diff));
     }
 
-    inline Request to_request(NoteSpec s, float time_unit, float harmonic_factor, Sounds & sounds) {
+    inline Request to_request(NoteSpec s, float time_unit, float harmonic_factor, float half_tone, Sounds & sounds) {
         if(s.note == Silence) {
             return {
                 sounds,
@@ -48,7 +51,7 @@ namespace imajuscule {
             return {
                 sounds,
                 Sound::SINE,
-                harmonic_factor * to_freq(s.note),
+                harmonic_factor * to_freq(s.note, half_tone),
                 s.loud ? 2.f : 1.f,
                 time_unit * (float)s.duration
             };

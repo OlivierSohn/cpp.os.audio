@@ -11,6 +11,8 @@ namespace imajuscule {
         
         void reset() { buffer = nullptr; }
         
+        bool valid() const { return duration_in_samples >= 1 && buffer && !buffer->empty(); }
+        
         soundBuffer const * buffer;
         float volume;
         int32_t duration_in_samples;

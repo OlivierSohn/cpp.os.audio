@@ -41,9 +41,12 @@ namespace imajuscule {
     }
     
     struct soundId {
-        soundId( Sound sound, float freq_hz ) : sound(sound), period_length( freq_to_int_period( freq_hz ) ) {
-            A( period_length >= 1 );
-        }
+        soundId( Sound sound, float freq_hz )
+        :
+        sound(sound),
+        period_length( freq_to_int_period( freq_hz ) )
+        {}
+        
         Sound sound;
         int32_t period_length;
         bool operator < (const soundId & other) const {
@@ -55,6 +58,8 @@ namespace imajuscule {
     };
     
     struct soundBuffer {
+        bool empty() const { return values.empty(); }
+        
         std::vector<float> values;
         
         soundBuffer(size_t n, float value) : values(n, value) {}
