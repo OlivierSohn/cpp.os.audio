@@ -1,23 +1,5 @@
-#if 1
-# define PA_SAMPLE_TYPE  paFloat32
+# define IMJ_PORTAUDIO_SAMPLE_TYPE  paFloat32
 using SAMPLE = float;
-# define SAMPLE_SILENCE  (0.0f)
-# define PRINTF_S_FORMAT "%.8f"
-#elif 0
-# define PA_SAMPLE_TYPE  paInt16
-using SAMPLE = short;
-# define SAMPLE_SILENCE  (0)
-# define PRINTF_S_FORMAT "%d"
-#elif 0
-# define PA_SAMPLE_TYPE  paInt8
-using SAMPLE = char;
-# define SAMPLE_SILENCE  (0)
-# define PRINTF_S_FORMAT "%d"
-#else
-# define PA_SAMPLE_TYPE  paUInt8
-# define SAMPLE_SILENCE  (128)
-# define PRINTF_S_FORMAT "%d"
-#endif
 
 typedef void PaStream; //from "portaudio.h"
 

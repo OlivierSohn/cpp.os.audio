@@ -7,10 +7,12 @@ class AudioTest_Compare_silence_empty_Test;
 class AudioTest_Validate_request_size_Test;
 
 namespace imajuscule {
+    constexpr unsigned int nAudioOut = 1; // note that on some systems, if there is only one output portaudio may refuse to open the stream
+
     struct DelayLine {
         DelayLine(int size, float attenuation);
         void step(SAMPLE * outputBuffer, int framesPerBuffer);
-        std::vector<float> delay;
+        std::vector<std::array<float, nAudioOut>> delay;
         int32_t it, end;
         float attenuation;
     };
@@ -117,13 +119,16 @@ namespace imajuscule {
             void write_xfade_right(SAMPLE * outputBuffer, float xfade_ratio, int const framesPerBuffer);
             void write_xfade_left(SAMPLE * outputBuffer, float xfade_ratio, int const framesPerBuffer);
 
-            void write_value(SAMPLE const val, SAMPLE *& outputBuffer) {
+            void write_value(SAMPLE val, SAMPLE *& outputBuffer) {
                 if( transition_volume_remaining ) {
                     transition_volume_remaining--;
                     channel_volume += channel_volume_increments;
                 }
-                *outputBuffer += amplitude * channel_volume * val;
-                ++outputBuffer;
+                val *= amplitude * channel_volume;
+                for(auto i=0; i<nAudioOut; ++i) {
+                    *outputBuffer += val;
+                    ++outputBuffer;
+                }
             }
             
             static_assert( 1 == size_xfade % 2, "");
@@ -164,7 +169,7 @@ namespace imajuscule {
                 if(n_max_writes <= 0) {
                     return false;
                 }
-                outputBuffer += xfade_written;
+                outputBuffer += xfade_written * nAudioOut;
                 A(remaining_samples_count == 0); // we are sure the xfade is finished
                 return consume();
             }

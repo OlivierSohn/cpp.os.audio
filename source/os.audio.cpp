@@ -16,15 +16,6 @@ int setenv(const char *name, const char *value, int overwrite)
 #endif
 
 
-const int NUM_CHANNELS(1);
-
-#define DITHER_FLAG     (0)
-
-#define CHECK_OVERFLOW  (0)
-#define CHECK_UNDERFLOW  (0)
-
-
-
 /* This routine will be called by the PortAudio engine when audio is needed.
  ** It may be called at interrupt level on some machines so don't do anything
  ** that could mess up the system like calling malloc() or free().
@@ -109,15 +100,20 @@ OSStatus renderCallback_out(void                        *userData,
     }
     
     outputData *data = (outputData*)userData;
-    data->outputBuffer.resize(numFrames);
+    auto sizeBuffer = numFrames*nAudioOut;
+    data->outputBuffer.resize(sizeBuffer);
     
     data->step(data->outputBuffer.data(), numFrames);
+    // data->outputBuffer is interleaved
     
     for (UInt32 i=0; i<buffers->mNumberBuffers; ++i) {
-        memset(buffers->mBuffers[i].mData, 0, buffers->mBuffers[i].mDataByteSize);
-        A(numFrames * sizeof(SInt16) == buffers->mBuffers[i].mDataByteSize);
-        for( UInt32 j=0; j<buffers->mBuffers[i].mDataByteSize; j++ ) {
-            ((SInt16*)(buffers->mBuffers[i].mData))[j] = (SInt16)(data->outputBuffer[j] * 32767.f);
+        A(sizeBuffer * sizeof(SInt16) == buffers->mBuffers[i].mDataByteSize);
+        A(nAudioOut == buffers->mBuffers[i].mNumberChannels);
+        auto buffer = (SInt16*)(buffers->mBuffers[i].mData);
+        for( UInt32 j=0; j<sizeBuffer; j++ ) {
+            auto val = (SInt16)(data->outputBuffer[j] * 32767.f);
+            *buffer = val;
+            ++buffer;
         }
     }
     
@@ -239,7 +235,7 @@ int initAudioSession() {
     return 0;
 }
 
-int initAudioStreams(AudioUnit & audioUnit, void * pData, AURenderCallback cb) {
+int initAudioStreams(AudioUnit & audioUnit, void * pData, AURenderCallback cb, int nOuts) {
     UInt32 audioCategory = //kAudioSessionCategory_RecordAudio;
     kAudioSessionCategory_PlayAndRecord;
     if(AudioSessionSetProperty(kAudioSessionProperty_AudioCategory,
@@ -294,13 +290,13 @@ int initAudioStreams(AudioUnit & audioUnit, void * pData, AURenderCallback cb) {
     // Not sure if the iPhone supports recording >16-bit audio, but I doubt it.
     streamDescription.mBitsPerChannel = 16;
     // 1 sample per frame, will always be 2 as long as 16-bit samples are being used
-    streamDescription.mBytesPerFrame = sizeof(SInt16);
+    streamDescription.mBytesPerFrame = nOuts*sizeof(SInt16);
     // Record in mono. Use 2 for stereo, though I don't think the iPhone does true stereo recording
-    streamDescription.mChannelsPerFrame = 1;
-    streamDescription.mBytesPerPacket = streamDescription.mBytesPerFrame *
-    streamDescription.mChannelsPerFrame;
+    streamDescription.mChannelsPerFrame = nOuts;
     // Always should be set to 1
     streamDescription.mFramesPerPacket = 1;
+    streamDescription.mBytesPerPacket = streamDescription.mBytesPerFrame *
+    streamDescription.mFramesPerPacket;
     // Always set to 0, just to be sure
     streamDescription.mReserved = 0;
     
@@ -402,7 +398,7 @@ bool AudioIn::do_wakeup() {
 #if TARGET_OS_IOS
     if(0==initAudioSession())
     {
-        if(0==initAudioStreams(audioUnit_in, &data, renderCallback_in))
+        if(0==initAudioStreams(audioUnit_in, &data, renderCallback_in, 1))
         {
             OSStatus res;
             res = startAudioUnit(audioUnit_in);
@@ -423,13 +419,14 @@ bool AudioIn::do_wakeup() {
     else
     {
         LG(ERR, "AudioIn::do_wakeup : initAudioSession failed");
-        A(0);
+        // fails on simulator
+        //A(0);
         return false;
     }
 #else
 
     LG(INFO, "AudioIn::do_wakeup : initializing %s", Pa_GetVersionText());
-    PaError err = Pa_Initialize();
+    auto err = Pa_Initialize();
     if(likely(err == paNoError))
     {
         LG(INFO, "AudioIn::do_wakeup : done initializing %s", Pa_GetVersionText());
@@ -445,8 +442,8 @@ bool AudioIn::do_wakeup() {
         }
         LG(INFO, "AudioIn::do_wakeup : audio device : id %d", inputParameters.device);
         
-        inputParameters.channelCount = NUM_CHANNELS;
-        inputParameters.sampleFormat = PA_SAMPLE_TYPE;
+        inputParameters.channelCount = 1;
+        inputParameters.sampleFormat = IMJ_PORTAUDIO_SAMPLE_TYPE;
         
         auto pi = Pa_GetDeviceInfo( inputParameters.device );
         LG(INFO, "AudioIn::do_wakeup : audio device : hostApi    %d", pi->hostApi);
@@ -516,7 +513,7 @@ void AudioOut::Init() {
     bInitialized = true;
     if(0==initAudioSession())
     {
-        if(0==initAudioStreams(audioUnit_out, &data, renderCallback_out))
+        if(0==initAudioStreams(audioUnit_out, &data, renderCallback_out, nAudioOut))
         {
             OSStatus res = startAudioUnit(audioUnit_out);
             if( noErr != res )
@@ -559,8 +556,8 @@ void AudioOut::Init() {
         }
         LG(INFO, "AudioOut::Init : audio device : id %d", p.device);
         
-        p.channelCount = NUM_CHANNELS;
-        p.sampleFormat = PA_SAMPLE_TYPE;
+        p.channelCount = nAudioOut;
+        p.sampleFormat = IMJ_PORTAUDIO_SAMPLE_TYPE;
         
         auto pi = Pa_GetDeviceInfo( p.device );
         LG(INFO, "AudioOut::Init : audio device : hostApi    %d", pi->hostApi);
@@ -568,23 +565,23 @@ void AudioOut::Init() {
         LG(INFO, "AudioOut::Init : audio device : maxIC      %d", pi->maxInputChannels);
         LG(INFO, "AudioOut::Init : audio device : maxOC      %d", pi->maxOutputChannels);
         LG(INFO, "AudioOut::Init : audio device : def. sr    %f", pi->defaultSampleRate);
-        LG(INFO, "AudioOut::Init : audio device : def. lilat %f", pi->defaultLowInputLatency);
-        LG(INFO, "AudioOut::Init : audio device : def. hilat %f", pi->defaultHighInputLatency);
+        LG(INFO, "AudioOut::Init : audio device : def. lolat %f", pi->defaultLowOutputLatency);
+        LG(INFO, "AudioOut::Init : audio device : def. holat %f", pi->defaultHighOutputLatency);
         
-        p.suggestedLatency =
+        p.suggestedLatency = /*4* trying to resolve crack at the beg*/nAudioOut *
         // on windows it's important to not set suggestedLatency too low, else samples are lost (for example only 16 are available per timestep)
-        pi->defaultLowInputLatency;
+        pi->defaultLowOutputLatency;
         
         p.hostApiSpecificStreamInfo = nullptr;
         
-        /* Record some audio. -------------------------------------------- */
+        /* Listen to some audio. -------------------------------------------- */
         PaError err = Pa_OpenStream(
                                     &stream,
                                     nullptr,
                                     &p,                  /* &outputParameters, */
                                     SAMPLE_RATE,
                                     0 /*if not 0 an additional buffering may be used for some host apis, increasing latency*/,
-                                    paClipOff,      /* we won't output out of range samples so don't bother clipping them */
+                                    paClipOff | paPrimeOutputBuffersUsingStreamCallback,      /* we won't output out of range samples so don't bother clipping them */
                                     playCallback,
                                     &data);
         if( unlikely(err != paNoError) )

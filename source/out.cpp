@@ -1,14 +1,17 @@
 
 using namespace imajuscule;
 
-DelayLine::DelayLine(int size, float attenuation): delay(size,0.f), it(0), end(size), attenuation(attenuation) {}
+DelayLine::DelayLine(int size, float attenuation): delay(size,{{}}), it(0), end(size), attenuation(attenuation) {}
 
 void DelayLine::step(SAMPLE *outputBuffer, int framesPerBuffer) {
     for( int i=0; i < framesPerBuffer; i++ ) {
         auto & d = delay[it];
-        auto delayed = d;
-        d = outputBuffer[i];
-        outputBuffer[i] += attenuation * delayed;
+        for(auto j=0; j<nAudioOut; ++j) {
+            auto delayed = d[j];
+            d[j] = *outputBuffer;
+            *outputBuffer += attenuation * delayed;
+            ++outputBuffer;
+        }
         ++it;
         if( unlikely(it == end) ) {
             it = 0;
@@ -91,7 +94,7 @@ void outputData::setVolume(uint8_t channel_id, float vol) {
 
 void outputData::step(SAMPLE *outputBuffer, int framesPerBuffer) {
     
-    memset(outputBuffer,0,framesPerBuffer*sizeof(SAMPLE));
+    memset(outputBuffer,0,framesPerBuffer*nAudioOut*sizeof(SAMPLE));
 
     {
         RAIILock l(used);
@@ -104,7 +107,7 @@ void outputData::step(SAMPLE *outputBuffer, int framesPerBuffer) {
     // apply the effect
     for( auto & delay : delays ) {
         // deactivated on purpose : reactivate once low pass filtered
-        //delay.step(outputBuffer, framesPerBuffer);
+        delay.step(outputBuffer, framesPerBuffer);
     }
 }
 
@@ -129,7 +132,7 @@ void outputData::Channel::step(SAMPLE * outputBuffer, int n_max_writes)
                     }
                     n_max_writes -= xfade_written;
                     A(n_max_writes > 0);
-                    outputBuffer += xfade_written;
+                    outputBuffer += xfade_written * nAudioOut;
                     A(crossfading_from_zero_remaining() <= 0);
                 }
             }
@@ -143,7 +146,7 @@ void outputData::Channel::step(SAMPLE * outputBuffer, int n_max_writes)
                     if(n_max_writes <= 0) {
                         return;
                     }
-                    outputBuffer += remaining_normal;
+                    outputBuffer += remaining_normal * nAudioOut;
                 }
             }
             A(remaining_samples_count >= 0);
@@ -175,7 +178,7 @@ void outputData::Channel::step(SAMPLE * outputBuffer, int n_max_writes)
                 if(n_max_writes <= 0) {
                     return;
                 }
-                outputBuffer += xfade_written;
+                outputBuffer += xfade_written * nAudioOut;
                 A(crossfading_from_zero_remaining() <= 0); // we are sure the xfade is finished
                 
                 if(remaining_samples_count < n_max_writes) {
@@ -193,7 +196,7 @@ void outputData::Channel::step(SAMPLE * outputBuffer, int n_max_writes)
                     if(n_max_writes <= 0) {
                         return;
                     }
-                    outputBuffer += remaining_normal;
+                    outputBuffer += remaining_normal * nAudioOut;
                 }
                 else {
                     write( outputBuffer, n_max_writes );
@@ -218,7 +221,7 @@ void outputData::Channel::write(SAMPLE * outputBuffer, int const n_writes) {
 //    LG(INFO, "write %d", n_writes);
     auto const s = (int) current.buffer->values.size();
     auto const a = amplitude * current.volume;
-    for( int i=0; i<n_writes; i++ ) {
+    for( int i=0; i<n_writes; ++i) {
         if( current_next_sample_index == s ) {
             current_next_sample_index = 0;
         }
@@ -229,8 +232,11 @@ void outputData::Channel::write(SAMPLE * outputBuffer, int const n_writes) {
             channel_volume += channel_volume_increments;
         }
         A(crossfading_from_zero_remaining() <= 0);
-        *outputBuffer += a * channel_volume * current.buffer->values[current_next_sample_index];
-        ++outputBuffer;
+        auto val = a * channel_volume * current.buffer->values[current_next_sample_index];
+        for(auto i=0; i<nAudioOut; ++i) {
+            *outputBuffer += val;
+            ++outputBuffer;
+        }
         ++current_next_sample_index;
     }
 }
