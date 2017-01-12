@@ -65,6 +65,7 @@ void soundBuffer::generate( int period, F f ) {
     
     A( (int)values.size() == period );
 }
+
 soundBuffer::soundBuffer( soundId const & id ) {
     values.reserve( id.period_length );
 
@@ -134,7 +135,7 @@ soundBuffer::soundBuffer( soundId const & id ) {
     }
 }
 
-soundBuffer const & Sounds::get(soundId const & id ) {
+soundBuffer const & Sounds::get(soundId id ) {
     {
         auto it = sounds.find(id);
         if( it != sounds.end() ) {

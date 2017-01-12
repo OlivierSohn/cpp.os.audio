@@ -3,8 +3,8 @@ using namespace imajuscule;
 
 DelayLine::DelayLine(int size, float attenuation): delay(size,{{}}), it(0), end(size), attenuation(attenuation) {}
 
-void DelayLine::step(SAMPLE *outputBuffer, int framesPerBuffer) {
-    for( int i=0; i < framesPerBuffer; i++ ) {
+void DelayLine::step(SAMPLE *outputBuffer, int nFrames) {
+    for( int i=0; i < nFrames; i++ ) {
         auto & d = delay[it];
         for(auto j=0; j<nAudioOut; ++j) {
             auto delayed = d[j];
@@ -96,22 +96,22 @@ void outputData::setVolume(uint8_t channel_id, channelVolumes volumes) {
     }
 }
 
-void outputData::step(SAMPLE *outputBuffer, int framesPerBuffer) {
+void outputData::step(SAMPLE *outputBuffer, int nFrames) {
     
-    memset(outputBuffer,0,framesPerBuffer*nAudioOut*sizeof(SAMPLE));
+    memset(outputBuffer,0,nFrames*nAudioOut*sizeof(SAMPLE));
 
     {
         RAIILock l(used);
         
         for( auto & c: channels ) {
-            c.step( outputBuffer, framesPerBuffer );
+            c.step( outputBuffer, nFrames );
         }
     }
     
     // apply the effect
     for( auto & delay : delays ) {
         // deactivated on purpose : reactivate once low pass filtered
-        delay.step(outputBuffer, framesPerBuffer);
+        delay.step(outputBuffer, nFrames);
     }
 }
 
@@ -223,7 +223,7 @@ void outputData::Channel::step(SAMPLE * outputBuffer, int n_max_writes)
 void outputData::Channel::write(SAMPLE * outputBuffer, int const n_writes) {
     A(n_writes > 0);
 //    LG(INFO, "write %d", n_writes);
-    auto const s = (int) current.buffer->values.size();
+    auto const s = (int) current.buffer->size();
     auto const a = amplitude * current.volume;
     for( int i=0; i<n_writes; ++i) {
         if( current_next_sample_index == s ) {
@@ -232,7 +232,7 @@ void outputData::Channel::write(SAMPLE * outputBuffer, int const n_writes) {
         A(current_next_sample_index < s);
         
         A(crossfading_from_zero_remaining() <= 0);
-        auto val = a * current.buffer->values[current_next_sample_index];
+        auto val = a * (*current.buffer)[current_next_sample_index];
         if( volume_transition_remaining ) {
             volume_transition_remaining--;
             for(auto i=0; i<nAudioOut; ++i) {
@@ -256,8 +256,8 @@ void outputData::Channel::write_xfade_right(SAMPLE * outputBuffer, float xfade_r
 
     // note that next points probably to deallocated memory but it's ok we don't dereference it
     auto const * other_buffer = (next || !current.buffer) ? previous.buffer : nullptr; // only end crossfade with other if we started with him
-    int const other_s = other_buffer? (int)other_buffer->values.size() : 0;
-    int const s = current.buffer ? (int) current.buffer->values.size() : 0;
+    int const other_s = other_buffer? (int)other_buffer->size() : 0;
+    int const s = current.buffer ? (int) current.buffer->size() : 0;
     for( int i=0; i<n_writes; i++ ) {
         auto val = 0.f;
         if(s) {
@@ -265,7 +265,7 @@ void outputData::Channel::write_xfade_right(SAMPLE * outputBuffer, float xfade_r
                 current_next_sample_index = 0;
             }
             A(current_next_sample_index < s);
-            val = (1.f - xfade_ratio) * current.volume * current.buffer->values[current_next_sample_index];
+            val = (1.f - xfade_ratio) * current.volume * (*current.buffer)[current_next_sample_index];
             ++current_next_sample_index;
         }
         if(other_s) {
@@ -275,7 +275,7 @@ void outputData::Channel::write_xfade_right(SAMPLE * outputBuffer, float xfade_r
                 other_next_sample_index = 0;
             }
             A(other_next_sample_index <= other_s);
-            val += xfade_ratio * previous.volume * previous.buffer->values[other_next_sample_index];
+            val += xfade_ratio * previous.volume * (*previous.buffer)[other_next_sample_index];
             ++other_next_sample_index;
         }
         xfade_ratio -= xfade_increment;
@@ -291,8 +291,8 @@ void outputData::Channel::write_xfade_left(SAMPLE * outputBuffer, float xfade_ra
     A(xfade_ratio >= 0.f);
     A(xfade_ratio <= 1.f);
     auto * other = next ? &requests.front() : nullptr;
-    int const other_s = other? safe_cast<int>(other->buffer->values.size()) : 0;
-    int const s = current.buffer ? (int) current.buffer->values.size() : 0;
+    int const other_s = other? safe_cast<int>(other->buffer->size()) : 0;
+    int const s = current.buffer ? (int) current.buffer->size() : 0;
     for( int i=0; i<n_writes; i++ ) {
         auto val = 0.f;
         if(s) {
@@ -300,7 +300,7 @@ void outputData::Channel::write_xfade_left(SAMPLE * outputBuffer, float xfade_ra
                 current_next_sample_index = 0;
             }
             A(current_next_sample_index < s);
-            val = xfade_ratio * current.volume * current.buffer->values[current_next_sample_index];
+            val = xfade_ratio * current.volume * (*current.buffer)[current_next_sample_index];
             ++current_next_sample_index;
         }
         if(other_s) {
@@ -310,7 +310,7 @@ void outputData::Channel::write_xfade_left(SAMPLE * outputBuffer, float xfade_ra
                 other_next_sample_index = 0;
             }
             A(other_next_sample_index <= other_s);
-            val += (1.f - xfade_ratio) * other->volume * other->buffer->values[other_next_sample_index];
+            val += (1.f - xfade_ratio) * other->volume * (*other->buffer)[other_next_sample_index];
             ++other_next_sample_index;
         }
         xfade_ratio -= xfade_increment;

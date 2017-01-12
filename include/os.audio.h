@@ -132,7 +132,7 @@ namespace imajuscule {
             , activator(a)
             {}
             
-            void step(const SAMPLE * inputBuffer, int framesPerBuffer);
+            void step(const SAMPLE * inputBuffer, int nFrames);
             
             FreqFromZC algo_freq;
             

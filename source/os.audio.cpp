@@ -121,7 +121,7 @@ OSStatus renderCallback_out(void                        *userData,
 }
 #else
 static int recordCallback( const void *inputBuffer, void *outputBuffer,
-                          unsigned long framesPerBuffer,
+                          unsigned long nFrames,
                           const PaStreamCallbackTimeInfo* timeInfo,
                           PaStreamCallbackFlags statusFlags,
                           void *userData )
@@ -133,12 +133,12 @@ static int recordCallback( const void *inputBuffer, void *outputBuffer,
     (void) statusFlags;
     (void) userData;
     
-    data->step((const SAMPLE*)inputBuffer, (int)framesPerBuffer);
+    data->step((const SAMPLE*)inputBuffer, (int)nFrames);
     
     return paContinue;
 }
 static int playCallback( const void *inputBuffer, void *outputBuffer,
-                          unsigned long framesPerBuffer,
+                          unsigned long nFrames,
                           const PaStreamCallbackTimeInfo* timeInfo,
                           PaStreamCallbackFlags statusFlags,
                           void *userData )
@@ -150,18 +150,18 @@ static int playCallback( const void *inputBuffer, void *outputBuffer,
     (void) statusFlags;
     (void) userData;
     
-    data->step((SAMPLE*)outputBuffer, (int)framesPerBuffer);
+    data->step((SAMPLE*)outputBuffer, (int)nFrames);
     
     return paContinue;
 }
 #endif
-void paTestData::step(const SAMPLE *rptr, int framesPerBuffer)
+void paTestData::step(const SAMPLE *rptr, int nFrames)
 {
     RAIILock l(used);
     
     if( !activator.onStep() && rptr )
     {
-        for( int i=0; i<framesPerBuffer; i++ )
+        for( int i=0; i<nFrames; i++ )
         {
             auto val = *rptr++;
             algo_max.feed(val);
@@ -278,7 +278,7 @@ int initAudioStreams(AudioUnit & audioUnit, void * pData, AURenderCallback cb, i
     AudioStreamBasicDescription streamDescription;
     // You might want to replace this with a different value, but keep in mind that the
     // iPhone does not support all sample rates. 8kHz, 22kHz, and 44.1kHz should all work.
-    streamDescription.mSampleRate = 44100;
+    streamDescription.mSampleRate = SAMPLE_RATE;
     // Yes, I know you probably want floating point samples, but the iPhone isn't going
     // to give you floating point data. You'll need to make the conversion by hand from
     // linear PCM <-> float.

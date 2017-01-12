@@ -11,7 +11,7 @@ namespace imajuscule {
 
     struct DelayLine {
         DelayLine(int size, float attenuation);
-        void step(SAMPLE * outputBuffer, int framesPerBuffer);
+        void step(SAMPLE * outputBuffer, int nFrames);
         std::vector<std::array<float, nAudioOut>> delay;
         int32_t it, end;
         float attenuation;
@@ -63,7 +63,7 @@ namespace imajuscule {
             Channel() :
             volume_transition_remaining(0), next(false) {}
             
-            void step(SAMPLE * outputBuffer, int framesPerBuffer);
+            void step(SAMPLE * outputBuffer, int nFrames);
             
             static constexpr int size_xfade = 201;
             static constexpr unsigned int volume_transition_length = 2000;
@@ -87,7 +87,7 @@ namespace imajuscule {
             std::array<Volume, nAudioOut> volumes;
             
             bool addRequest(Request r) {
-                if(r.duration_in_samples < 2*size_xfade) {
+                if(r.duration_in_frames < 2*size_xfade) {
                     return false;
                 }
                 requests.emplace(std::move(r));
@@ -114,31 +114,31 @@ namespace imajuscule {
                     }
                     // emulate a right xfade 'to zero'
                     current.reset();
-                    current.duration_in_samples = size_xfade-1; // to do the right xfade
+                    current.duration_in_frames = size_xfade-1; // to do the right xfade
                     remaining_samples_count = size_half_xfade;  // to do the right xfade
                     current_next_sample_index = 0;
                     other_next_sample_index = 0;
                 }
                 else if(!next && !current.buffer) {
                     // emulate a left xfade 'from zero'
-                    current.duration_in_samples = 2 * size_xfade; // to skip the right xfade
+                    current.duration_in_frames = 2 * size_xfade; // to skip the right xfade
                     remaining_samples_count = size_half_xfade + 1; // to skip the normal writes and begin the left xfade
                 }
                 else {
                     current = requests.front();
                     requests.pop();
                     
-                    A(current.duration_in_samples >= 0);
-                    remaining_samples_count = current.duration_in_samples;
+                    A(current.duration_in_frames >= 0);
+                    remaining_samples_count = current.duration_in_frames;
                     current_next_sample_index = 0;
                     other_next_sample_index = 0;
                 }
                 return true;
             }
             
-            void write(SAMPLE * outputBuffer, int framesPerBuffer);
-            void write_xfade_right(SAMPLE * outputBuffer, float xfade_ratio, int const framesPerBuffer);
-            void write_xfade_left(SAMPLE * outputBuffer, float xfade_ratio, int const framesPerBuffer);
+            void write(SAMPLE * outputBuffer, int nFrames);
+            void write_xfade_right(SAMPLE * outputBuffer, float xfade_ratio, int const nFrames);
+            void write_xfade_left(SAMPLE * outputBuffer, float xfade_ratio, int const nFrames);
 
             void write_value(SAMPLE val, SAMPLE *& outputBuffer) {
                 if( volume_transition_remaining ) {
@@ -162,16 +162,16 @@ namespace imajuscule {
          
             int crossfading_from_zero_remaining() const {
                 if(next) {
-                    return size_half_xfade - (current.duration_in_samples - remaining_samples_count);
+                    return size_half_xfade - (current.duration_in_frames - remaining_samples_count);
                 }
                 else {
-                    return (size_xfade-1) - (current.duration_in_samples - remaining_samples_count);
+                    return (size_xfade-1) - (current.duration_in_frames - remaining_samples_count);
                 }
             }
             
             void onBeginToZero() {
                 if((next = !requests.empty())) {
-                    int sz_buffer = safe_cast<int>(requests.front().buffer->values.size());
+                    int sz_buffer = safe_cast<int>(requests.front().buffer->size());
                     other_next_sample_index = ( sz_buffer - 1 - size_half_xfade) % sz_buffer;
                     if(other_next_sample_index < 0) {
                         other_next_sample_index += sz_buffer;
@@ -209,7 +209,7 @@ namespace imajuscule {
         outputData();
         
         // called from audio callback
-        void step(SAMPLE * outputBuffer, int framesPerBuffer);
+        void step(SAMPLE * outputBuffer, int nFrames);
         
         std::vector< DelayLine > delays;
         

@@ -42,7 +42,7 @@ namespace imajuscule {
             return {
                 sounds,
                 Sound::SILENCE,
-                0.f,
+                Sound::ConstantSoundDummyFrequency,
                 0.f,
                 time_unit * (float)s.duration
             };
