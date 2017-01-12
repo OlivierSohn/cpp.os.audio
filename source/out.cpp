@@ -111,7 +111,7 @@ void outputData::step(SAMPLE *outputBuffer, int nFrames) {
     // apply the effect
     for( auto & delay : delays ) {
         // deactivated on purpose : reactivate once low pass filtered
-        delay.step(outputBuffer, nFrames);
+        //delay.step(outputBuffer, nFrames);
     }
 }
 

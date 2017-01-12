@@ -36,6 +36,11 @@ namespace imajuscule {
         }
         return freq_do * powf(half_tone, static_cast<float>(diff));
     }
+    
+    
+    static inline float upper(float freq, float half_tone, int n) {
+        return freq * powf(half_tone, n);
+    }
 
     inline Request to_request(NoteSpec s, float time_unit, float harmonic_factor, float half_tone, Sounds & sounds) {
         if(s.note == Silence) {

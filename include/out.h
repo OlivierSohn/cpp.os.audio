@@ -21,20 +21,36 @@ namespace imajuscule {
     static constexpr auto AUDIO_CHANNEL_NONE = std::numeric_limits<uint8_t>::max();
     
     using channelVolumes = std::array<float, nAudioOut>;
+
+    struct StereoGain {
+        float left, right;
+        
+        StereoGain opposite() const { return { right, left }; }
+    };
     
+    static inline StereoGain stereo(float pan) {
+        pan = std::min(pan, 1.f);
+        pan = std::max(pan, -1.f);
+        
+        // http://dsp.stackexchange.com/questions/21691/algorithm-to-pan-audio
+        auto angle = 0.25f * (pan + 1.f) * static_cast<float>(M_PI);
+        
+        return {cosf(angle), sinf(angle)};
+    }
+
     struct MakeVolume {
         template<int J = nAudioOut>
         static
         typename std::enable_if<J == 1, typename std::array<float, J>>::type
-        run(float volume, float left, float right) {
+        run(float volume, StereoGain const & ) {
             return {{volume}};
         }
         
         template<int J = nAudioOut>
         static
         typename std::enable_if<J == 2, typename std::array<float, J>>::type
-        run(float volume, float left, float right) {
-            return {{left*volume, right*volume}};
+        run(float volume, StereoGain const & gain) {
+            return {{gain.left*volume, gain.right*volume}};
         }
     };
     
