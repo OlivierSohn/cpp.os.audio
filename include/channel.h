@@ -27,20 +27,39 @@ namespace imajuscule {
         ExplicitClose, // the channel cannot be reassigned unless explicitely closed
     };
     
-    struct outputData;
+    template<class T>
+    constexpr int clamp_xfade(T xfade_) {
+        int xfade = xfade_;
+        if(xfade < 3) {
+            return 3;
+        }
+        if(0 == xfade % 2) {
+            ++xfade;
+        }
+        return xfade;
+    }
     
     struct Channel : public NonCopyable {
         
-        friend struct outputData;
+        void set_xfade(int const size_xfade) {
+            A(!isPlaying()); // do not call this method while playing
+            A( 1 == size_xfade % 2);
+            
+            size_half_xfade = (size_xfade-1) / 2;
+            A(size_half_xfade > 0);
+        }
         
-        Channel() : volume_transition_remaining(0), next(false) {}
+        int get_size_xfade() const { return 1 + 2 * size_half_xfade; }
+        float get_xfade_increment() const { return 1.f / (get_size_xfade() - 1); };
+        float duration_millis_xfade() const { return 1000.f * static_cast<float>(get_size_xfade()) / SAMPLE_RATE; }
+        
+        Channel() : volume_transition_remaining(0), next(false)
+        {}
         
         void step(SAMPLE * outputBuffer, int nFrames);
         
         static constexpr float base_amplitude = 0.1f; // ok to have 10 chanels at max amplitude at the same time
 
-        static constexpr int size_xfade = 401;
-        static constexpr float duration_millis_xfade = 1000.f * size_xfade / SAMPLE_RATE;
         static constexpr unsigned int volume_transition_length = 2000;
         // make sure we'll have no overflow on volume_transition_remaining
         static_assert(volume_transition_length < (1 << 16), "");
@@ -50,6 +69,7 @@ namespace imajuscule {
         // else the current crossfade is from or to 'empty'
         Request current;
         Request previous;
+        int size_half_xfade;
         int32_t remaining_samples_count = 0;
         int32_t current_next_sample_index = 0;
         int32_t other_next_sample_index = 0;
@@ -62,7 +82,7 @@ namespace imajuscule {
         std::array<Volume, nAudioOut> volumes;
         
         bool addRequest(Request r) {
-            if(r.duration_in_frames < 2*size_xfade) {
+            if(r.duration_in_frames < 2*get_size_xfade()) {
                 return false;
             }
             requests.emplace(std::move(r));
@@ -89,14 +109,14 @@ namespace imajuscule {
                 }
                 // emulate a right xfade 'to zero'
                 current.reset();
-                current.duration_in_frames = size_xfade-1; // to do the right xfade
+                current.duration_in_frames = get_size_xfade()-1; // to do the right xfade
                 remaining_samples_count = size_half_xfade;  // to do the right xfade
                 current_next_sample_index = 0;
                 other_next_sample_index = 0;
             }
             else if(!next && !current.buffer) {
                 // emulate a left xfade 'from zero'
-                current.duration_in_frames = 2 * size_xfade; // to skip the right xfade
+                current.duration_in_frames = 2 * get_size_xfade(); // to skip the right xfade
                 remaining_samples_count = size_half_xfade + 1; // to skip the normal writes and begin the left xfade
             }
             else {
@@ -129,18 +149,12 @@ namespace imajuscule {
             }
         }
         
-        static_assert( 1 == size_xfade % 2, "");
-        static constexpr int size_half_xfade = (size_xfade-1) / 2;
-        
-        static constexpr float xfade_increment = 1.f / (size_xfade-1);
-        static constexpr float inv_half_size_xfade = 1.f / size_half_xfade;
-        
         int crossfading_from_zero_remaining() const {
             if(next) {
                 return size_half_xfade - (current.duration_in_frames - remaining_samples_count);
             }
             else {
-                return (size_xfade-1) - (current.duration_in_frames - remaining_samples_count);
+                return (get_size_xfade()-1) - (current.duration_in_frames - remaining_samples_count);
             }
         }
         
@@ -159,7 +173,7 @@ namespace imajuscule {
             if(remaining_samples_count == size_half_xfade + 1) {
                 onBeginToZero();
             }
-            auto xfade_ratio = 0.5f + 0.5f* (float)(remaining_samples_count-1) * inv_half_size_xfade;
+            auto xfade_ratio = 0.5f + (float)(remaining_samples_count-1) / (float)(2*size_half_xfade);
             auto xfade_written = std::min(remaining_samples_count, n_max_writes);
             write_xfade_left( outputBuffer, xfade_ratio, xfade_written );
             n_max_writes -= xfade_written;

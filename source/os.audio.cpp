@@ -710,25 +710,6 @@ void Audio::doTearDown() {
     audioIn.TearDown();
 }
 
-uint8_t AudioOut::openChannel(channelVolumes volumes, ChannelClosingPolicy channel_lifecycle) {
-    Init();
-    return data.openChannel(volumes, channel_lifecycle);
-}
-void AudioOut::closeChannel( uint8_t id ) {
-    if( data.closeChannel( id ) ) {
-        TearDown();
-    }
-}
-
-void AudioOut::play( uint8_t channel_id, StaticVector<Request> && v ) {
-    data.play( channel_id, std::move( v ) );
-}
-
-void AudioOut::setVolume( uint8_t channel_id, channelVolumes volumes ) {
-    data.setVolume( channel_id, volumes);
-}
-
-
 InternalResult AlgoMax::computeWhileLocked(float &f)
 {
     f = maxAbsSinceLastRead;

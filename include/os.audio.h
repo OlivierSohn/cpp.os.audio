@@ -209,10 +209,30 @@ namespace imajuscule {
         Sounds sounds;
     public:
         bool Initialized() const { return bInitialized; }
-        uint8_t openChannel(channelVolumes = {{1.f}}, ChannelClosingPolicy = ExplicitClose);
-        void play( uint8_t channel_id, StaticVector<Request> && );
-        void setVolume( uint8_t channel_id, channelVolumes );
-        void closeChannel(uint8_t channel_id);
+        uint8_t openChannel(channelVolumes volumes = {{1.f}},
+                            ChannelClosingPolicy channel_lifecycle = ExplicitClose,
+                            int xfade_length = 401) {
+            Init();
+            return data.openChannel(volumes, channel_lifecycle, xfade_length);
+        }
+
+        void play( uint8_t channel_id, StaticVector<Request> && v ) {
+            data.play( channel_id, std::move( v ) );
+        }
+        
+        void setVolume( uint8_t channel_id, channelVolumes volumes ) {
+            data.setVolume( channel_id, volumes);
+        }
+
+        void closeChannel(uint8_t channel_id) {
+            if( data.closeChannel( channel_id ) ) {
+                TearDown();
+            }
+        }
+        
+        int get_xfade_millis(uint8_t channel_id) const {
+            return data.getChannel(channel_id).duration_millis_xfade();
+        }
         
         Sounds & editSounds() { return sounds; }
     };

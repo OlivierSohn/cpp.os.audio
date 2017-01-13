@@ -40,6 +40,7 @@
 		09C682D21E28945600C2716D /* channel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = channel.h; path = include/channel.h; sourceTree = "<group>"; };
 		09C682D31E28945600C2716D /* stereo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = stereo.h; path = include/stereo.h; sourceTree = "<group>"; };
 		09C682D41E28945600C2716D /* oscillator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = oscillator.h; path = include/oscillator.h; sourceTree = "<group>"; };
+		09C682D81E28E44600C2716D /* channel.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = channel.cpp; path = source/channel.cpp; sourceTree = "<group>"; };
 		09C84A441C271D95002CF5B7 /* osx.debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = osx.debug.xcconfig; sourceTree = "<group>"; };
 		09C84A451C271D95002CF5B7 /* ios.debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = ios.debug.xcconfig; sourceTree = "<group>"; };
 		09C84A461C271D95002CF5B7 /* ios.release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = ios.release.xcconfig; sourceTree = "<group>"; };
@@ -113,6 +114,7 @@
 		09E7B1321BB5CA0E007BAA5F /* source */ = {
 			isa = PBXGroup;
 			children = (
+				09C682D81E28E44600C2716D /* channel.cpp */,
 				09E7B1301BB5CA01007BAA5F /* os.audio.cpp */,
 				09C645B31E0EC8A200153C61 /* out.cpp */,
 				09C645AB1E0A9E4200153C61 /* parse.music.cpp */,
