@@ -115,7 +115,7 @@ void outputData::step(SAMPLE *outputBuffer, int nFrames) {
     }
 }
 
-void outputData::Channel::step(SAMPLE * outputBuffer, int n_max_writes)
+void Channel::step(SAMPLE * outputBuffer, int n_max_writes)
 {
     if(remaining_samples_count == 0 && !consume()) {
         return;
@@ -220,11 +220,11 @@ void outputData::Channel::step(SAMPLE * outputBuffer, int n_max_writes)
     }
 }
 
-void outputData::Channel::write(SAMPLE * outputBuffer, int const n_writes) {
+void Channel::write(SAMPLE * outputBuffer, int const n_writes) {
     A(n_writes > 0);
 //    LG(INFO, "write %d", n_writes);
     auto const s = (int) current.buffer->size();
-    auto const a = amplitude * current.volume;
+    auto const a = base_amplitude * current.volume;
     for( int i=0; i<n_writes; ++i) {
         if( current_next_sample_index == s ) {
             current_next_sample_index = 0;
@@ -247,7 +247,7 @@ void outputData::Channel::write(SAMPLE * outputBuffer, int const n_writes) {
     }
 }
 
-void outputData::Channel::write_xfade_right(SAMPLE * outputBuffer, float xfade_ratio, int const n_writes) {
+void Channel::write_xfade_right(SAMPLE * outputBuffer, float xfade_ratio, int const n_writes) {
     A(n_writes > 0);
 //    LG(INFO, ">>>>> %d", n_writes);
     A(n_writes <= crossfading_from_zero_remaining());
@@ -284,7 +284,7 @@ void outputData::Channel::write_xfade_right(SAMPLE * outputBuffer, float xfade_r
 }
 
 
-void outputData::Channel::write_xfade_left(SAMPLE * outputBuffer, float xfade_ratio, int const n_writes) {
+void Channel::write_xfade_left(SAMPLE * outputBuffer, float xfade_ratio, int const n_writes) {
     A(n_writes > 0);
 //    LG(INFO, "<<<<< %d", n_writes);
     A(n_writes <= remaining_samples_count);

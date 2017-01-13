@@ -14,7 +14,10 @@
 #include "../../cg.math/include/public.h"
 
 #include "sound.h"
+#include "oscillator.h"
 #include "request.h"
+#include "stereo.h"
+#include "channel.h"
 #include "out.h"
 #include "note.h"
 #include "parse.music.h"
