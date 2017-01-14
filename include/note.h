@@ -38,7 +38,7 @@ namespace imajuscule {
     }
     
     
-    static inline float upper(float freq, float half_tone, int n) {
+    static inline float transpose_frequency(float freq, float half_tone, int n) {
         return freq * powf(half_tone, n);
     }
 
