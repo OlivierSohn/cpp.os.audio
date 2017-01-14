@@ -78,13 +78,9 @@ uint8_t outputData::openChannel(channelVolumes volume, ChannelClosingPolicy l, i
 }
 
 bool outputData::closeChannel(uint8_t channel_id) {
-    // we could
-    // - transform the channel into an autoclosing channel
-    // - clear the queue (except the first element in case it is crossfading)
-    // to stop playing "as soon as possible but without generating undesirable clics"
     {
         RAIILock l(used);
-        editChannel(channel_id).clear();
+        editChannel(channel_id).stopPlaying();
     }
     available_ids.Return(channel_id);
     return channels.empty();

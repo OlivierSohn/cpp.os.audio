@@ -58,7 +58,9 @@ namespace imajuscule {
         float duration_millis_xfade() const { return 1000.f * static_cast<float>(get_size_xfade()) / SAMPLE_RATE; }
         
         Channel() : volume_transition_remaining(0), next(false)
-        {}
+        {
+            A(!isPlaying());
+        }
         
         void step(SAMPLE * outputBuffer, int nFrames);
         
@@ -92,10 +94,10 @@ namespace imajuscule {
             requests.emplace(std::move(r));
             return true;
         }
-        
-        void clear() {
-            std::queue<Request> empty;
-            requests.swap(empty);
+
+        // after calling this method, isPlaying() returns false
+        void stopPlaying() {
+            *this = Channel{};
         }
         
         bool isPlaying() const {
