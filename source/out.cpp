@@ -19,12 +19,22 @@ void DelayLine::step(SAMPLE *outputBuffer, int nFrames) {
     }
 }
 
-outputData::outputData() : delays{{1000, 0.6f},{4000, 0.2f}, {4300, 0.3f}, {5000, 0.1f}} {
+constexpr auto osc_freq = 300.f;
+constexpr auto ramp_duration_seconds = 1.f;
+
+outputData::outputData()
+: delays{{1000, 0.6f},{4000, 0.2f}, {4300, 0.3f}, {5000, 0.1f}},
+ramp(300.f,
+     600.f,
+     ramp_duration_seconds * SAMPLE_RATE,
+     itp::EASE_INOUT_QUINT),
+osc(angle_increment_from_freq(osc_freq)){
     // to avoid reallocations when we hold the lock
     // we allocate all we need for channel management now:
     channels.reserve(std::numeric_limits<uint8_t>::max());
     autoclosing_ids.reserve(std::numeric_limits<uint8_t>::max());
     available_ids.reserve(std::numeric_limits<uint8_t>::max());
+    
 }
 
 uint8_t outputData::openChannel(channelVolumes volume, ChannelClosingPolicy l, int xfade_length) {
@@ -99,7 +109,13 @@ void outputData::setVolume(uint8_t channel_id, channelVolumes volumes) {
 }
 
 void outputData::step(SAMPLE *outputBuffer, int nFrames) {
-    
+    // nFrames might vary, if we want to monitor that:
+    /*static int sNFrames = -1;
+    if(nFrames != sNFrames) {
+        LG(INFO, "frames changed: %d -> %d", sNFrames, nFrames);
+        sNFrames = nFrames;
+    }*/
+        
     memset(outputBuffer,0,nFrames*nAudioOut*sizeof(SAMPLE));
 
     {
@@ -107,6 +123,20 @@ void outputData::step(SAMPLE *outputBuffer, int nFrames) {
         
         for( auto & c: channels ) {
             c.step( outputBuffer, nFrames );
+        }
+    }
+
+    auto b = outputBuffer;
+    for(auto i = 0; i < nFrames; ++i) {
+        stepOscillators();
+        for(int i=0; i<nAudioOut; ++i) {
+            if(i==0) {
+                *b += 0.1f * osc.real();
+            }
+            if(i==1) {
+                *b += 0.1f * ramp.real();
+            }
+            ++b;
         }
     }
     

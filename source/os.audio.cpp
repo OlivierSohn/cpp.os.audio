@@ -255,7 +255,7 @@ int initAudioStreams(AudioUnit & audioUnit, void * pData, AURenderCallback cb, i
     componentDescription.componentManufacturer = kAudioUnitManufacturer_Apple;
     componentDescription.componentFlags = 0;
     componentDescription.componentFlagsMask = 0;
-    AudioComponent component = AudioComponentFindNext(nullptr, &componentDescription);
+    auto component = AudioComponentFindNext(nullptr, &componentDescription);
     if(AudioComponentInstanceNew(component, &audioUnit) != noErr) {
         return 1;
     }

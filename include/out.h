@@ -21,6 +21,13 @@ namespace imajuscule {
         std::vector<Channel> channels;
         std::vector<uint8_t> autoclosing_ids;
         
+        Oscillator<float> osc;
+        Ramp<float> ramp;
+        void stepOscillators() {
+            osc.step();
+            ramp.step();
+        }
+        
     public:
         outputData();
         

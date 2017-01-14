@@ -21,7 +21,7 @@ namespace imajuscule {
             const char * getVarDoc() { return "Audio frequency"; }
             
             // use constant epsilon instead of 0 to not record zero crossing related to noise
-            const SAMPLE upperZero =
+            static constexpr SAMPLE upperZero =
 #ifdef _WIN32
             0.005f // TODO make that user configurable (ask user to record noise)
 #else

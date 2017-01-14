@@ -27,6 +27,10 @@ namespace imajuscule {
         ExplicitClose, // the channel cannot be reassigned unless explicitely closed
     };
     
+    /*
+     * Ensures that xfade length is odd,
+     * and at least 3
+     */
     template<class T>
     constexpr int clamp_xfade(T xfade_) {
         int xfade = xfade_;

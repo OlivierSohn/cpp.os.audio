@@ -1,9 +1,11 @@
 #pragma once
 
-#include <atomic>
-#include <queue>
 #include <algorithm>
+#include <atomic>
+#include <complex>
 #include <map>
+#include <queue>
+#include <vector>
 
 #include "../../algorithms/include/public.h"
 #include "../../tp.muparser/include/public.h"
