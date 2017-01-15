@@ -2,8 +2,11 @@ namespace imajuscule {
 
     template<typename T>
     struct AudioElement {
+        static constexpr auto bufferSize = 16; // 16 * 4 = 1 cache line
         using FPT = T;
         using Tr = NumTraits<T>;
+        
+        std::vector<float> buffer;
     };
     
     /*
@@ -93,6 +96,9 @@ namespace imajuscule {
  
     template<typename T>
     struct Ramp : AudioElement<T> {
+        
+        static_assert(std::is_same<T,float>::value, "non float interpolation is not supported");
+        
         using typename AudioElement<T>::Tr;
 
         Ramp(T from_,

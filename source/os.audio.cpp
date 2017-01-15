@@ -834,7 +834,7 @@ InternalResult FreqFromZC::computeWhileLocked(float & f)
         range<int32_t> r_;
         int32_t count_;
     };
-    StaticVector<IntervalRange> ranges(positive_zeros_dist.size());
+    StackVector<IntervalRange> ranges(positive_zeros_dist.size());
     
     auto it = positive_zeros_dist.begin();
     auto end = positive_zeros_dist.end();

@@ -216,7 +216,7 @@ namespace imajuscule {
             return data.openChannel(volumes, channel_lifecycle, xfade_length);
         }
 
-        void play( uint8_t channel_id, StaticVector<Request> && v ) {
+        void play( uint8_t channel_id, StackVector<Request> && v ) {
             data.play( channel_id, std::move( v ) );
         }
         

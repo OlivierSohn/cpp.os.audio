@@ -44,7 +44,7 @@ namespace imajuscule {
         uint8_t openChannel(channelVolumes volume, ChannelClosingPolicy, int xfade_length);
         Channel & editChannel(uint8_t id) { return channels[id]; }
         Channel const & getChannel(uint8_t id) const { return channels[id]; }
-        void play( uint8_t channel_id, StaticVector<Request> && );
+        void play( uint8_t channel_id, StackVector<Request> && );
         void setVolume( uint8_t channel_id, channelVolumes );
         bool closeChannel(uint8_t channel_id);
     };    

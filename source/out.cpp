@@ -86,7 +86,7 @@ bool outputData::closeChannel(uint8_t channel_id) {
     return channels.empty();
 }
 
-void outputData::play( uint8_t channel_id, StaticVector<Request> && v ) {
+void outputData::play( uint8_t channel_id, StackVector<Request> && v ) {
     RAIILock l(used);
     
     auto & c = editChannel(channel_id);
