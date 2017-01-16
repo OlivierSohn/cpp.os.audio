@@ -24,6 +24,8 @@ constexpr auto ramp_duration_seconds = 1.f;
 
 outputData::outputData()
 : delays{{1000, 0.6f},{4000, 0.2f}, {4300, 0.3f}, {5000, 0.1f}},
+clock_(false),
+consummed_frames(0),
 ramp(300.f,
      600.f,
      ramp_duration_seconds * SAMPLE_RATE,
@@ -111,17 +113,28 @@ void outputData::step(SAMPLE *outputBuffer, int nFrames) {
         LG(INFO, "frames changed: %d -> %d", sNFrames, nFrames);
         sNFrames = nFrames;
     }*/
-        
-    memset(outputBuffer,0,nFrames*nAudioOut*sizeof(SAMPLE));
-
+    
     {
         RAIILock l(used);
-        
-        for( auto & c: channels ) {
-            c.step( outputBuffer, nFrames );
+
+        if(consummed_frames != 0) {
+            // finish consuming previous buffers
+            if(!consume_buffers(outputBuffer, nFrames)) {
+                return;
+            }
+        }
+
+        while(true) {
+            // the previous buffers are consumed, we need to compute them again
+            computeNextAudioElementsBuffers();
+            
+            if(!consume_buffers(outputBuffer, nFrames)) {
+                return;
+            }
         }
     }
 
+    /*
     auto b = outputBuffer;
     for(auto i = 0; i < nFrames; ++i) {
         stepOscillators();
@@ -134,12 +147,7 @@ void outputData::step(SAMPLE *outputBuffer, int nFrames) {
             }
             ++b;
         }
-    }
+    }*/
     
-    // apply the effect
-    for( auto & delay : delays ) {
-        // deactivated on purpose : reactivate once low pass filtered
-        //delay.step(outputBuffer, nFrames);
-    }
 }
 

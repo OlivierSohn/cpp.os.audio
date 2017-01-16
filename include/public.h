@@ -5,6 +5,7 @@
 #include <complex>
 #include <map>
 #include <queue>
+#include <type_traits>
 #include <vector>
 
 #include "../../algorithms/include/public.h"

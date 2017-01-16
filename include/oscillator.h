@@ -1,12 +1,40 @@
 namespace imajuscule {
 
+    constexpr auto cache_line_n_bytes = 64;
+    
+    struct AudioElementBase {
+        // AudioComponent<float> has a buffer of size 1 cache line
+        // AudioComponent<double> has a buffer of size 2 cache lines
+        // each of them have 16 frames worth of data in their buffer
+        static constexpr auto n_frames_per_buffer = cache_line_n_bytes / 4;
+        static constexpr auto buffer_alignment = cache_line_n_bytes;
+    };
+    
     template<typename T>
-    struct AudioElement {
-        static constexpr auto bufferSize = 16; // 16 * 4 = 1 cache line
+    struct AudioElement : public AudioElementBase {
+        // todo review the strategy : an Oscillator has an addition 4 floats to store, so 16 - 4 floats will be wasted on the second cache line
+        // if an AudioElement is stored contiguously after...
+        // maybe it's best to keep a pointer (or index if we have a buffer pool) to the buffer, to be sure there will be no waste
+        using buffer_placeholder_t = std::aligned_storage_t<n_frames_per_buffer * sizeof(T), buffer_alignment>;
+        static_assert(alignof(buffer_placeholder_t) == buffer_alignment,"");
+        
+        // [AudioElement] beginning of the 1st cache line
+        union {
+            buffer_placeholder_t placeholder; // used to constrain alignment
+            T buffer[n_frames_per_buffer];
+        };
+
+        // [AudioElement<float>] beginning of the 2nd cache line
+        // [AudioElement<double>] beginning of the 3rd cache line
+        bool empty : 1;
+        bool clock_ : 1;
+        
         using FPT = T;
         using Tr = NumTraits<T>;
         
-        std::vector<float> buffer;
+        AudioElement() : empty(true) {
+            A(0 == reinterpret_cast<unsigned long>(buffer) % buffer_alignment);
+        }
     };
     
     /*
@@ -57,6 +85,10 @@ namespace imajuscule {
     struct Oscillator : AudioElement<T> {
         using typename AudioElement<T>::Tr;
 
+        using AudioElement<T>::buffer;
+        using AudioElement<T>::clock_;
+        using AudioElement<T>::empty;
+
         constexpr Oscillator(T angle_increments) { setAngleIncrements(angle_increments); }
         constexpr Oscillator() : mult(Tr::one(), Tr::zero()) {}
         
@@ -71,6 +103,20 @@ namespace imajuscule {
             }
             else {
                 normalize();
+            }
+        }
+        
+        void compute(bool const sync_clock) {
+            if(empty) {
+                empty = false;
+            }
+            else if(sync_clock == clock_) {
+                return;
+            }
+            clock_ = sync_clock;
+            for(auto & e : buffer) {
+                step();
+                e = real();
             }
         }
         
@@ -101,6 +147,10 @@ namespace imajuscule {
         
         using typename AudioElement<T>::Tr;
 
+        using AudioElement<T>::buffer;
+        using AudioElement<T>::clock_;
+        using AudioElement<T>::empty;
+
         Ramp(T from_,
              T to_,
              T duration_in_samples,
@@ -130,6 +180,20 @@ namespace imajuscule {
             osc.setAngleIncrements(f);
             osc.step(); // we step osc because we own it
             cur_sample += C * f ;
+        }
+        
+        void compute(bool const sync_clock) {
+            if(empty) {
+                empty = false;
+            }
+            else if(sync_clock == clock_) {
+                return;
+            }
+            clock_ = sync_clock;
+            for(auto & e : buffer) {
+                step();
+                e = real();
+            }
         }
 
         T real() const { return osc.real(); }
