@@ -171,27 +171,6 @@ namespace imajuscule {
             
             paTestData data;
         };
-        
-        class RAIILock {
-        public:
-            RAIILock( std::atomic_bool & l ) : l(l) {
-                bool bFalse( false );
-                // TODO check the way we use locks, this is different from RAIILock in sensor.h
-                
-                while (!l.compare_exchange_strong(bFalse, true,
-                                                  std::memory_order_acquire,
-                                                  std::memory_order_relaxed))
-                {}
-            }
-            ~RAIILock() {
-                l.store(false, std::memory_order_release);
-            }
-        private:
-            std::atomic_bool & l;
-            
-            RAIILock(const RAIILock &) = delete;
-            RAIILock & operator = (const RAIILock &) = delete;
-        };
     }
     
     class AudioOut : public NonCopyable {
@@ -209,7 +188,7 @@ namespace imajuscule {
         Sounds sounds;
     public:
         bool Initialized() const { return bInitialized; }
-        uint8_t openChannel(channelVolumes volumes = {{1.f}},
+        uint8_t openChannel(channelVolumes volumes = {{1.f,1.f}},
                             ChannelClosingPolicy channel_lifecycle = ExplicitClose,
                             int xfade_length = 401) {
             Init();
@@ -235,7 +214,6 @@ namespace imajuscule {
         }
         
         Sounds & editSounds() { return sounds; }
-        Oscillator<float> & oscillator() { return data.oscillator(); }
     };
 
     class Audio {

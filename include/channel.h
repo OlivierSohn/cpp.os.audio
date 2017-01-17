@@ -476,14 +476,17 @@ namespace imajuscule {
                     // at the first sample of the buffer.
                 
                     int sz_buffer = safe_cast<int>(requests.front().buffer.asSoundBuffer().size());
-                    other_next_sample_index = ( sz_buffer - 1 - size_half_xfade) % sz_buffer;
-                    if(other_next_sample_index < 0) {
+                    other_next_sample_index = sz_buffer - 1 - size_half_xfade;
+                    while(other_next_sample_index < 0) {
                         other_next_sample_index += sz_buffer;
                     }
                 }
                 else {
                     A(n_writes_remaining > 0);
-                    other_next_sample_index = AudioElementBase::n_frames_per_buffer-n_writes_remaining;
+                    other_next_sample_index = AudioElementBase::n_frames_per_buffer - n_writes_remaining;
+                    while(other_next_sample_index < 0) {
+                        other_next_sample_index += AudioElementBase::n_frames_per_buffer;
+                    }
                     A(other_next_sample_index < AudioElementBase::n_frames_per_buffer);
                 }
                 A(other_next_sample_index >= 0);

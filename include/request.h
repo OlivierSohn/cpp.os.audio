@@ -5,28 +5,28 @@ namespace imajuscule {
         return static_cast<int>( SAMPLE_RATE * 0.001f * duration_ms );
     }
     
-    using AE32Buffer = float const *;
-    using AE64Buffer = double const *;
+    using AE32Buffer = float *;
+    using AE64Buffer = double *;
 
     struct TaggedBuffer {
         
         explicit TaggedBuffer(std::nullptr_t)
         : is_32(false), is_AudioElement(false), buffer(nullptr) {}
 
-        explicit TaggedBuffer(soundBuffer const *buf)
+        explicit TaggedBuffer(soundBuffer const * buf)
         : is_32(true), is_AudioElement(false), buffer(buf) {}
 
-        explicit TaggedBuffer(AE32Buffer const buf)
+        explicit TaggedBuffer(AE32Buffer buf)
         : is_32(true), is_AudioElement(true), buffer(buf) {}
         
-        explicit TaggedBuffer(AE64Buffer const buf)
+        explicit TaggedBuffer(AE64Buffer buf)
         : is_32(false), is_AudioElement(true), buffer(buf) {}
         
         void reset() {
             *this = TaggedBuffer{nullptr};
         }
         
-        void reset(soundBuffer const *buf) {
+        void reset(soundBuffer const * buf) {
             *this = TaggedBuffer{buf};
         }
         
@@ -98,7 +98,7 @@ namespace imajuscule {
         // all buffers are aligned on cachelines (64=2^6) meaning the 6 lower bits my be used to store information
         union buffer {
             buffer(std::nullptr_t) : sound(nullptr) {}
-            buffer(soundBuffer const *buf) : sound(buf) {}
+            buffer(soundBuffer const * buf) : sound(buf) {}
             buffer(AE32Buffer buf) : audioelement_32(buf) {}
             buffer(AE64Buffer buf) : audioelement_64(buf) {}
             
@@ -111,14 +111,20 @@ namespace imajuscule {
     struct Request {
         Request( Sounds & sounds, Sound const sound, float freq_hz, float volume, float duration_ms );
         
-        Request( soundBuffer const *buffer, float volume, int duration_in_frames) :
+        Request( soundBuffer const * buffer, float volume, int duration_in_frames) :
+        buffer(buffer), volume(volume), duration_in_frames(duration_in_frames) {}
+
+        Request( AE32Buffer buffer, float volume, int duration_in_frames) :
+        buffer(buffer), volume(volume), duration_in_frames(duration_in_frames) {}
+        
+        Request( AE64Buffer buffer, float volume, int duration_in_frames) :
         buffer(buffer), volume(volume), duration_in_frames(duration_in_frames) {}
 
         Request( AE32Buffer buffer, float volume, float duration_in_ms) :
-        buffer(buffer), volume(volume), duration_in_frames(ms_to_frames(duration_in_ms)) {}
-
+        Request(buffer, volume, ms_to_frames(duration_in_ms)) {}
+        
         Request( AE64Buffer buffer, float volume, float duration_in_ms) :
-        buffer(buffer), volume(volume), duration_in_frames(ms_to_frames(duration_in_ms)) {}
+        Request(buffer, volume, ms_to_frames(duration_in_ms)) {}
         
         Request() : buffer(nullptr) {}
         

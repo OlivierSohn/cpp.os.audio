@@ -1,6 +1,29 @@
 
 namespace imajuscule {
    
+    namespace Sensor {
+        
+        class RAIILock {
+        public:
+            RAIILock( std::atomic_bool & l ) : l(l) {
+                bool bFalse( false );
+                // TODO check the way we use locks, this is different from RAIILock in sensor.h
+                
+                while (!l.compare_exchange_strong(bFalse, true,
+                                                  std::memory_order_acquire,
+                                                  std::memory_order_relaxed))
+                {}
+            }
+            ~RAIILock() {
+                l.store(false, std::memory_order_release);
+            }
+        private:
+            std::atomic_bool & l;
+            
+            RAIILock(const RAIILock &) = delete;
+            RAIILock & operator = (const RAIILock &) = delete;
+        };
+    }
     struct DelayLine {
         DelayLine(int size, float attenuation);
         void step(SAMPLE * outputBuffer, int nFrames);
@@ -33,8 +56,7 @@ namespace imajuscule {
         std::vector<Channel> channels;
         std::vector<uint8_t> autoclosing_ids;
         
-        Oscillator<float> osc;
-        Ramp<float> ramp;
+        std::vector<std::function<void(bool)>> audioElements_computes;
         
     public:
         outputData();
@@ -56,14 +78,20 @@ namespace imajuscule {
         void setVolume( uint8_t channel_id, channelVolumes );
         bool closeChannel(uint8_t channel_id);
         
-        Oscillator<float> & oscillator() { return osc; }
+        template<typename F>
+        void registerAudioElementCompute(F f) {
+            Sensor::RAIILock l(used);
+            // todo prevent reallocation here to not block audio...
+            audioElements_computes.push_back(std::move(f));
+        }
+        
     private:
         void computeNextAudioElementsBuffers() {
             A(consummed_frames == 0); // else we skip some unconsummed frames
             clock_ = !clock_;
-
-            osc.compute(clock_);
-            ramp.compute(clock_);
+            for(auto const & f : audioElements_computes) {
+                f(clock_);
+            }
             A(consummed_frames == 0);
         }
         

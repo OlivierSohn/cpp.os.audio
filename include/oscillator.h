@@ -1,6 +1,14 @@
 namespace imajuscule {
     
-    struct AudioElementBase {
+    struct AudioElementBase  {
+        AudioElementBase() = default;
+        
+        // no copy or move because the lambda returned by fCompute() captures this
+        AudioElementBase(const AudioElementBase &) = delete;
+        AudioElementBase & operator=(const AudioElementBase&) = delete;
+        AudioElementBase(AudioElementBase &&) = delete;
+        AudioElementBase& operator = (AudioElementBase &&) = delete;
+
         // AudioComponent<float> has a buffer of size 1 cache line
         // AudioComponent<double> has a buffer of size 2 cache lines
         // each of them have 16 frames worth of data in their buffer
@@ -16,7 +24,7 @@ namespace imajuscule {
         ////// [AudioElement] beginning of the 1st cache line
         
         union {
-            buffer_placeholder_t placeholder; // used to constrain alignment
+            buffer_placeholder_t for_alignment;
             T buffer[n_frames_per_buffer];
         };
 
@@ -42,13 +50,21 @@ namespace imajuscule {
     template<typename T>
     struct PCOscillator : AudioElement<T> {
         using typename AudioElement<T>::Tr;
-
+        
+        using AudioElement<T>::buffer;
+        using AudioElement<T>::clock_;
+        using AudioElement<T>::empty;
+        
         PCOscillator() = default;
         PCOscillator(T angle_increments) { setAngleIncrements(angle_increments); }
         
+        void setAngle( T angle ) { angle_ = angle; }
+        T angle() const { return angle_; }
+
         void setAngleIncrements(T v) {
             angle_increments = v;
         }
+        T angleIncrements() const { return angle_increments; }
         
         void step() {
             angle_ += angle_increments;
@@ -60,10 +76,27 @@ namespace imajuscule {
             }
         }
         
+        void compute(bool const sync_clock) {
+            if(empty) {
+                empty = false;
+            }
+            else if(sync_clock == clock_) {
+                return;
+            }
+            clock_ = sync_clock;
+            for(auto & e : buffer) {
+                step();
+                e = imag(); // sinus
+            }
+        }
+        
+        std::function<void(bool)> fCompute() {
+            empty = true;
+            return [this](bool clck) { compute(clck); };
+        }
+        
         T real() const { return std::cos(M_PI*angle_); }
         T imag() const { return std::sin(M_PI*angle_); }
-        
-        T angle() const { return M_PI*angle_; }
         
     private:
         
@@ -113,7 +146,7 @@ namespace imajuscule {
             clock_ = sync_clock;
             for(auto & e : buffer) {
                 step();
-                e = real();
+                e = imag(); // sinus
             }
         }
         

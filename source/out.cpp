@@ -25,12 +25,14 @@ constexpr auto ramp_duration_seconds = 1.f;
 outputData::outputData()
 : delays{{1000, 0.6f},{4000, 0.2f}, {4300, 0.3f}, {5000, 0.1f}},
 clock_(false),
-consummed_frames(0),
-ramp(300.f,
+consummed_frames(0)
+/*
+ ,ramp(300.f,
      600.f,
      ramp_duration_seconds * SAMPLE_RATE,
      itp::EASE_INOUT_QUINT),
-osc(angle_increment_from_freq(osc_freq)){
+osc(angle_increment_from_freq(osc_freq))*/
+{
     // to avoid reallocations when we hold the lock
     // we allocate all we need for channel management now:
     channels.reserve(std::numeric_limits<uint8_t>::max());
