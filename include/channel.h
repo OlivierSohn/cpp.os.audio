@@ -62,7 +62,7 @@ namespace imajuscule {
             A(!isPlaying());
         }
         
-        void step(SAMPLE * outputBuffer, int nFrames);
+        void step(SAMPLE * outputBuffer, int nFrames, unsigned int audio_element_consummed);
         
         static constexpr float base_amplitude = 0.1f; // ok to have 10 chanels at max amplitude at the same time
 
@@ -70,9 +70,15 @@ namespace imajuscule {
         // make sure we'll have no overflow on volume_transition_remaining
         static_assert(volume_transition_length < (1 << 16), "");
         uint16_t volume_transition_remaining;
+
     private:
-        bool next : 1; // if false, the current crossfade is between two requests,
+        // if next is false, the current crossfade is between two requests,
         // else the current crossfade is from or to 'empty'
+        bool next : 1;
+        
+        unsigned int total_n_writes : relevantBits(AudioElementBase::n_frames_per_buffer);
+        unsigned int initial_audio_element_consummed : relevantBits(AudioElementBase::n_frames_per_buffer - 1);
+        
         Request current;
         Request previous;
         int size_half_xfade;
@@ -483,10 +489,10 @@ namespace imajuscule {
                 }
                 else {
                     A(n_writes_remaining > 0);
-                    other_next_sample_index = AudioElementBase::n_frames_per_buffer - n_writes_remaining;
-                    while(other_next_sample_index < 0) {
-                        other_next_sample_index += AudioElementBase::n_frames_per_buffer;
-                    }
+                    
+                    other_next_sample_index = initial_audio_element_consummed; // keep separate to make the type consversion
+                    A(n_writes_remaining <= total_n_writes); // make sure it's safe to do the following substraction, total_n_writes being unsigned
+                    other_next_sample_index += total_n_writes - n_writes_remaining;
                     A(other_next_sample_index < AudioElementBase::n_frames_per_buffer);
                 }
                 A(other_next_sample_index >= 0);

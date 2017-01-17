@@ -120,10 +120,16 @@ namespace imajuscule {
         }
         
         void do_consume_buffers(SAMPLE * outputBuffer, int nFrames) {
+            A(nFrames <= AudioElementBase::n_frames_per_buffer); // by design
+            A(consummed_frames < AudioElementBase::n_frames_per_buffer); // by design
+            
             memset(outputBuffer, 0, nFrames * nAudioOut * sizeof(SAMPLE));
             
             for( auto & c: channels ) {
-                c.step( outputBuffer, nFrames );
+                c.step(outputBuffer,
+                       nFrames,
+                       consummed_frames ); // with that, the channel knows when
+                                           // the next computation of AudioElements will occur
             }
 
             // apply the effect
