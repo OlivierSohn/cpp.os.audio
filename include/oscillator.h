@@ -91,7 +91,6 @@ namespace imajuscule {
         }
         
         std::function<void(bool)> fCompute() {
-            empty = true;
             return [this](bool clck) { compute(clck); };
         }
         
