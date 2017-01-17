@@ -2,10 +2,11 @@
 using namespace imajuscule;
 
 Request::Request( Sounds & sounds, Sound const sound, float freq_hz, float vol, float duration_ms ) :
-volume(vol)
+volume(vol),
+buffer(nullptr)
 {
     A(duration_ms >= 0.f);
-    duration_in_frames = (int)( ((float)SAMPLE_RATE) * 0.001f * duration_ms );
+    duration_in_frames = ms_to_frames(duration_ms);
 
     // we silence some sounds instead of just not playing them, in order to keep
     // the rythm
@@ -27,15 +28,15 @@ volume(vol)
         }
     }
     if(silence) {
-        buffer = &sounds.get( {Sound::SILENCE} );
+        buffer.reset(&sounds.get( {Sound::SILENCE} ));
         volume = 0.f;
     }
     else {
-        buffer = &sounds.get( std::move(Id) );
-        A(buffer);
+        auto & b = sounds.get( std::move(Id) );
+        buffer.reset(&b);
         
         if( sound.zeroOnPeriodBoundaries() ) {
-            const int period_size = (int)buffer->size();
+            const int period_size = (int)b.size();
             if(period_size == 0) {
                 return;
             }

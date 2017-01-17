@@ -56,7 +56,7 @@ namespace imajuscule {
         void setVolume( uint8_t channel_id, channelVolumes );
         bool closeChannel(uint8_t channel_id);
         
-        float const * oscillator() const { return osc.buffer; }
+        Oscillator<float> & oscillator() { return osc; }
     private:
         void computeNextAudioElementsBuffers() {
             A(consummed_frames == 0); // else we skip some unconsummed frames
@@ -67,7 +67,7 @@ namespace imajuscule {
             A(consummed_frames == 0);
         }
         
-        // returns true if everything was consummed AND there is more frames remianing
+        // returns true if everything was consummed AND there is more frames remaining
         bool consume_buffers(SAMPLE *& buf, int & nFrames) {
             A(consummed_frames < AudioElementBase::n_frames_per_buffer);
             auto remaining_frames = AudioElementBase::n_frames_per_buffer - consummed_frames;

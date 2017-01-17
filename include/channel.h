@@ -95,9 +95,9 @@ namespace imajuscule {
             return true;
         }
 
-        // after calling this method, isPlaying() returns false
         void stopPlaying() {
             *this = Channel{};
+            A(!isPlaying());
         }
         
         bool isPlaying() const {
@@ -107,6 +107,7 @@ namespace imajuscule {
         
         bool consume() {
             previous = current;
+            auto current_next_sample_index_backup = current_next_sample_index;
             A(remaining_samples_count == 0);
             if (requests.empty()) {
                 A(!next); // because we have started the crossfade and have detected that there is no more requests to process
@@ -118,7 +119,6 @@ namespace imajuscule {
                 current.duration_in_frames = get_size_xfade()-1; // to do the right xfade
                 remaining_samples_count = size_half_xfade;  // to do the right xfade
                 current_next_sample_index = 0;
-                other_next_sample_index = 0;
             }
             else if(!next && !current.buffer) {
                 // emulate a left xfade 'from zero'
@@ -131,23 +131,326 @@ namespace imajuscule {
                 
                 A(current.duration_in_frames >= 0);
                 remaining_samples_count = current.duration_in_frames;
-                current_next_sample_index = 0;
-                other_next_sample_index = 0;
+                current_next_sample_index = next ? other_next_sample_index : 0;
             }
+            other_next_sample_index = current_next_sample_index_backup;
             return true;
         }
         
-        void write(SAMPLE * outputBuffer, int nFrames);
-        void write_xfade_right(SAMPLE * outputBuffer, float xfade_ratio, int const nFrames);
-        void write_xfade_left(SAMPLE * outputBuffer, float xfade_ratio, int const nFrames);
+        void write_single(SAMPLE * outputBuffer, int n_writes) {
+            A(n_writes > 0);
+            //LG(INFO, "write %d", n_writes);
+            auto const volume = base_amplitude * current.volume;
+            if(current.buffer.isSoundBuffer()) {
+                write_single_SoundBuffer(outputBuffer, n_writes, current.buffer.asSoundBuffer(), volume);
+            }
+            else if(current.buffer.is32()) {
+                write_single_AudioElement(outputBuffer, n_writes, current.buffer.asAudioElement32(), volume);
+            }
+            else {
+                write_single_AudioElement(outputBuffer, n_writes, current.buffer.asAudioElement64(), volume);
+            }
+        }
         
-        void write_value(SAMPLE val, SAMPLE *& outputBuffer) {
-            if( volume_transition_remaining ) {
-                volume_transition_remaining--;
+        void write_single_SoundBuffer(SAMPLE * outputBuffer, int n_writes, soundBuffer const & buf, float volume) {
+            auto const s = (int) buf.size();
+            for( int i=0; i<n_writes; ++i) {
+                if( current_next_sample_index == s ) {
+                    current_next_sample_index = 0;
+                }
+                A(current_next_sample_index < s);
+                
+                A(crossfading_from_zero_remaining() <= 0);
+                auto val = volume * buf[current_next_sample_index];
+                stepVolume();
                 for(auto i=0; i<nAudioOut; ++i) {
-                    volumes[i].current += volumes[i].increments;
+                    *outputBuffer += val * volumes[i].current;
+                    ++outputBuffer;
+                }
+                ++current_next_sample_index;
+            }
+        }
+
+        template<typename T>
+        void write_single_AudioElement(SAMPLE * outputBuffer, int n_writes, T const & buf, float volume) {
+            for( int i=0; i<n_writes; ++i) {
+                A(current_next_sample_index < AudioElementBase::n_frames_per_buffer);
+                
+                A(crossfading_from_zero_remaining() <= 0);
+                auto val = volume * static_cast<float>(buf[current_next_sample_index]);
+                stepVolume();
+                for(auto i=0; i<nAudioOut; ++i) {
+                    *outputBuffer += val * volumes[i].current;
+                    ++outputBuffer;
+                }
+                ++current_next_sample_index;
+            }
+
+            if(current_next_sample_index == AudioElementBase::n_frames_per_buffer) {
+                current_next_sample_index = 0;
+            }
+        }
+        
+        void write_left_xfade(SAMPLE * outputBuffer, float xfade_ratio, int const n_writes) {
+            A(n_writes > 0);
+            //LG(INFO, "<<<<< %d", n_writes);
+            A(n_writes <= remaining_samples_count);
+            A(xfade_ratio >= 0.f);
+            A(xfade_ratio <= 1.f);
+            
+            auto xfade_increment = get_xfade_increment();
+            
+            if(current.buffer.isSoundBuffer()) {
+                if(!next || requests.front().buffer.isSoundBuffer()) {
+                    auto * other = next ? &requests.front() : nullptr;
+                    write_SoundBuffer_2_SoundBuffer_xfade(outputBuffer, xfade_ratio, n_writes, xfade_increment, other);
+                }
+                else {
+                    A(next);
+                    auto * other = &requests.front();
+                    write_SoundBuffer_2_AudioElement_xfade(outputBuffer, xfade_ratio, n_writes, xfade_increment, other);
+                }
+            } else {
+                auto * other = next ? &requests.front() : nullptr;
+                
+                if(other && other->buffer.isAudioElement()) {
+                    write_AudioElement_2_AudioElement_xfade(outputBuffer, xfade_ratio, n_writes, xfade_increment, other);
+                }
+                else {
+                    write_AudioElement_2_SoundBuffer_xfade(outputBuffer, xfade_ratio, n_writes, xfade_increment, other);
                 }
             }
+        }
+
+        void write_right_xfade(SAMPLE * outputBuffer, float xfade_ratio, int const n_writes) {
+            A(n_writes > 0);
+            //LG(INFO, ">>>>> %d", n_writes);
+            A(n_writes <= crossfading_from_zero_remaining());
+            A(xfade_ratio >= 0.f);
+            A(xfade_ratio <= 1.f);
+            
+            auto xfade_decrement = - get_xfade_increment();
+            xfade_ratio = 1-xfade_ratio;
+            
+            // end crossfade with other only if we started with him
+            auto const * other = (next || !current.buffer) ? &previous : nullptr;
+            
+            if(!other || other->buffer.isSoundBuffer()) {
+                if(!current.buffer || current.buffer.isSoundBuffer()) {
+                    write_SoundBuffer_2_SoundBuffer_xfade(outputBuffer, xfade_ratio, n_writes, xfade_decrement, other);
+                }
+                else {
+                    write_AudioElement_2_SoundBuffer_xfade(outputBuffer, xfade_ratio, n_writes, xfade_decrement, other);
+                }
+            } else {
+                if(current.buffer && current.buffer.isAudioElement()) {
+                    write_AudioElement_2_AudioElement_xfade(outputBuffer, xfade_ratio, n_writes, xfade_decrement, other);
+                }
+                else {
+                    write_SoundBuffer_2_AudioElement_xfade(outputBuffer, xfade_ratio, n_writes, xfade_decrement, other);
+                }
+            }
+        }
+        
+        void write_SoundBuffer_2_SoundBuffer_xfade(SAMPLE * outputBuffer, float xfade_ratio, int const n_writes, float xfade_increment,
+                                                   Request const * other) {
+            A(!other || !other->buffer || other->buffer.isSoundBuffer());
+            A(!current.buffer || current.buffer.isSoundBuffer());
+
+            int const s = current.buffer ? (int) current.buffer.asSoundBuffer().size() : 0;
+            int const other_s = (other && other->buffer) ? safe_cast<int>(other->buffer.asSoundBuffer().size()) : 0;
+            for( int i=0; i<n_writes; i++ ) {
+                auto val = 0.f;
+                if(s) {
+                    if( current_next_sample_index == s ) {
+                        current_next_sample_index = 0;
+                    }
+                    A(current_next_sample_index < s);
+                    val = xfade_ratio * current.volume * current.buffer.asSoundBuffer()[current_next_sample_index];
+                    ++current_next_sample_index;
+                }
+                if(other_s) {
+                    A(other_next_sample_index >= 0);
+                    A(other_next_sample_index <= other_s);
+                    if(other_next_sample_index == other_s) {
+                        other_next_sample_index = 0;
+                    }
+                    A(other_next_sample_index <= other_s);
+                    val += (1.f - xfade_ratio) * other->volume * (other->buffer.asSoundBuffer())[other_next_sample_index];
+                    ++other_next_sample_index;
+                }
+                xfade_ratio -= xfade_increment;
+                write_value(val, outputBuffer);
+            }
+        }
+        
+        void write_SoundBuffer_2_AudioElement_xfade(SAMPLE * outputBuffer, float xfade_ratio, int const n_writes, float xfade_increment,
+                                                    Request const * other) {
+            A(!current.buffer || current.buffer.isSoundBuffer());
+            A(other->buffer.isAudioElement());
+            if(other->buffer.is32()) {
+                write_SoundBuffer_2_AudioElement_xfade(outputBuffer, xfade_ratio, n_writes, xfade_increment,
+                                                       other->buffer.asAudioElement32(),
+                                                       other->volume);
+            }
+            else {
+                write_SoundBuffer_2_AudioElement_xfade(outputBuffer, xfade_ratio, n_writes, xfade_increment,
+                                                       other->buffer.asAudioElement64(),
+                                                       other->volume);
+            }
+        }
+
+        template<typename T>
+        void write_SoundBuffer_2_AudioElement_xfade(SAMPLE * outputBuffer, float xfade_ratio, int const n_writes, float xfade_increment,
+                                                    T const & buf2, float const volBuf2) {
+            int const s = current.buffer ? (int) current.buffer.asSoundBuffer().size() : 0;
+            for( int i=0; i<n_writes; i++ ) {
+                A(other_next_sample_index >= 0);
+                A(other_next_sample_index < AudioElementBase::n_frames_per_buffer);
+                auto val = (1.f - xfade_ratio) * volBuf2 * static_cast<float>(buf2[other_next_sample_index]);
+                ++other_next_sample_index;
+                
+                if(s) {
+                    if( current_next_sample_index == s ) {
+                        current_next_sample_index = 0;
+                    }
+                    A(current_next_sample_index < s);
+                    val += xfade_ratio * current.volume * current.buffer.asSoundBuffer()[current_next_sample_index];
+                    ++current_next_sample_index;
+                }
+
+                xfade_ratio -= xfade_increment;
+                write_value(val, outputBuffer);
+            }
+            
+            if(other_next_sample_index == AudioElementBase::n_frames_per_buffer) {
+                other_next_sample_index = 0;
+            }
+        }
+
+        void write_AudioElement_2_SoundBuffer_xfade(SAMPLE * outputBuffer, float xfade_ratio, int const n_writes, float xfade_increment,
+                                                    Request const * other) {
+            A(current.buffer.isAudioElement());
+            A(!other || !other->buffer || other->buffer.isSoundBuffer());
+            if(current.buffer.is32()) {
+                write_AudioElement_2_SoundBuffer_xfade(outputBuffer, xfade_ratio, n_writes, xfade_increment,
+                                                       current.buffer.asAudioElement32(),
+                                                       current.volume,
+                                                       other);
+            }
+            else {
+                write_AudioElement_2_SoundBuffer_xfade(outputBuffer, xfade_ratio, n_writes, xfade_increment,
+                                                       current.buffer.asAudioElement64(),
+                                                       current.volume,
+                                                       other);
+            }
+        }
+        
+        template<typename T>
+        void write_AudioElement_2_SoundBuffer_xfade(SAMPLE * outputBuffer, float xfade_ratio, int const n_writes, float xfade_increment,
+                                                        T const & buf1, float const volBuf1
+                                                        , Request const * other) {
+            int const other_s = (other && other->buffer) ? safe_cast<int>(other->buffer.asSoundBuffer().size()) : 0;
+            for( int i=0; i<n_writes; ++i, ++current_next_sample_index) {
+                A(current_next_sample_index >= 0);
+                A(current_next_sample_index < AudioElementBase::n_frames_per_buffer);
+                auto val = xfade_ratio * volBuf1 * buf1[current_next_sample_index];
+                
+                if(other_s) {
+                    A(other_next_sample_index >= 0);
+                    A(other_next_sample_index <= other_s);
+                    if(other_next_sample_index == other_s) {
+                        other_next_sample_index = 0;
+                    }
+                    A(other_next_sample_index <= other_s);
+                    val += (1.f - xfade_ratio) * other->volume * (other->buffer.asSoundBuffer())[other_next_sample_index];
+                    ++other_next_sample_index;
+                }
+                xfade_ratio -= xfade_increment;
+                write_value(val, outputBuffer);
+            }
+            
+            if(current_next_sample_index == AudioElementBase::n_frames_per_buffer) {
+                current_next_sample_index = 0;
+            }
+        }
+
+        void write_AudioElement_2_AudioElement_xfade(SAMPLE * outputBuffer, float xfade_ratio, int const n_writes, float xfade_increment,
+                                                     Request const * other)
+        {
+            A(other->buffer.isAudioElement());
+            A(current.buffer.isAudioElement());
+            if(current.buffer.is32()) {
+                if(other->buffer.is32()) {
+                    write_AudioElement_2_AudioElement_xfade(outputBuffer, xfade_ratio, n_writes, xfade_increment,
+                                                            current.buffer.asAudioElement32(),
+                                                            current.volume,
+                                                            other->buffer.asAudioElement32(),
+                                                            other->volume);
+                }
+                else {
+                    write_AudioElement_2_AudioElement_xfade(outputBuffer, xfade_ratio, n_writes, xfade_increment,
+                                                            current.buffer.asAudioElement32(),
+                                                            current.volume,
+                                                            other->buffer.asAudioElement64(),
+                                                            other->volume);
+                }
+            }
+            else {
+                if(other->buffer.is32()) {
+                    write_AudioElement_2_AudioElement_xfade(outputBuffer, xfade_ratio, n_writes, xfade_increment,
+                                                            current.buffer.asAudioElement64(),
+                                                            current.volume,
+                                                            other->buffer.asAudioElement32(),
+                                                            other->volume);
+                }
+                else {
+                    write_AudioElement_2_AudioElement_xfade(outputBuffer, xfade_ratio, n_writes, xfade_increment,
+                                                            current.buffer.asAudioElement64(),
+                                                            current.volume,
+                                                            other->buffer.asAudioElement64(),
+                                                            other->volume);
+                }
+            }
+        }
+        
+        template<typename T1, typename T2>
+        void write_AudioElement_2_AudioElement_xfade(SAMPLE * outputBuffer, float xfade_ratio, int const n_writes, float xfade_increment,
+                                                         T1 const & buf1, float const volBuf1,
+                                                         T2 const & buf2, float const volBuf2) {
+            for( int i=0; i<n_writes; ++i, ++current_next_sample_index, ++other_next_sample_index, xfade_ratio -= xfade_increment) {
+                A(current_next_sample_index >= 0);
+                A(current_next_sample_index < AudioElementBase::n_frames_per_buffer);
+                A(other_next_sample_index >= 0);
+                A(other_next_sample_index < AudioElementBase::n_frames_per_buffer);
+                
+                write_value(
+                            (xfade_ratio * volBuf1 * static_cast<float>(buf1[current_next_sample_index])) +
+                            (1.f - xfade_ratio) * volBuf2 * static_cast<float>(buf2[other_next_sample_index])
+                            ,
+                            outputBuffer);
+            }
+            
+            if(current_next_sample_index == AudioElementBase::n_frames_per_buffer) {
+                current_next_sample_index = 0;
+            }
+            if(other_next_sample_index == AudioElementBase::n_frames_per_buffer) {
+                other_next_sample_index = 0;
+            }
+        }
+        
+        void stepVolume() {
+            if( 0 == volume_transition_remaining ) {
+                return;
+            }
+            volume_transition_remaining--;
+            for(auto i=0; i<nAudioOut; ++i) {
+                volumes[i].current += volumes[i].increments;
+            }
+        }
+
+        void write_value(SAMPLE val, SAMPLE *& outputBuffer) {
+            stepVolume();
             val *= base_amplitude;
             for(auto i=0; i<nAudioOut; ++i) {
                 *outputBuffer += val * volumes[i].current;
@@ -164,12 +467,24 @@ namespace imajuscule {
             }
         }
         
-        void onBeginToZero() {
+        void onBeginToZero(int n_writes_remaining) {
             if((next = !requests.empty())) {
-                int sz_buffer = safe_cast<int>(requests.front().buffer->size());
-                other_next_sample_index = ( sz_buffer - 1 - size_half_xfade) % sz_buffer;
-                if(other_next_sample_index < 0) {
-                    other_next_sample_index += sz_buffer;
+                
+                if(requests.front().buffer.isSoundBuffer()) {
+                    // soundBuffer are "synchronized" when possible : a sinus will start at the first positive value of sin, and end at 0
+                    // so we want to start playing the next soundBuffer so that at the middle of the crossfade, it is exactly
+                    // at the first sample of the buffer.
+                
+                    int sz_buffer = safe_cast<int>(requests.front().buffer.asSoundBuffer().size());
+                    other_next_sample_index = ( sz_buffer - 1 - size_half_xfade) % sz_buffer;
+                    if(other_next_sample_index < 0) {
+                        other_next_sample_index += sz_buffer;
+                    }
+                }
+                else {
+                    A(n_writes_remaining > 0);
+                    other_next_sample_index = AudioElementBase::n_frames_per_buffer-n_writes_remaining;
+                    A(other_next_sample_index < AudioElementBase::n_frames_per_buffer);
                 }
                 A(other_next_sample_index >= 0);
             }
@@ -177,11 +492,11 @@ namespace imajuscule {
         
         bool handleToZero(SAMPLE *& outputBuffer, int & n_max_writes) {
             if(remaining_samples_count == size_half_xfade + 1) {
-                onBeginToZero();
+                onBeginToZero(n_max_writes);
             }
             auto xfade_ratio = 0.5f + (float)(remaining_samples_count-1) / (float)(2*size_half_xfade);
             auto xfade_written = std::min(remaining_samples_count, n_max_writes);
-            write_xfade_left( outputBuffer, xfade_ratio, xfade_written );
+            write_left_xfade( outputBuffer, xfade_ratio, xfade_written );
             n_max_writes -= xfade_written;
             remaining_samples_count -= xfade_written;
             if(n_max_writes <= 0) {

@@ -1,6 +1,4 @@
 namespace imajuscule {
-
-    constexpr auto cache_line_n_bytes = 64;
     
     struct AudioElementBase {
         // AudioComponent<float> has a buffer of size 1 cache line
@@ -12,20 +10,19 @@ namespace imajuscule {
     
     template<typename T>
     struct AudioElement : public AudioElementBase {
-        // todo review the strategy : an Oscillator has an addition 4 floats to store, so 16 - 4 floats will be wasted on the second cache line
-        // if an AudioElement is stored contiguously after...
-        // maybe it's best to keep a pointer (or index if we have a buffer pool) to the buffer, to be sure there will be no waste
         using buffer_placeholder_t = std::aligned_storage_t<n_frames_per_buffer * sizeof(T), buffer_alignment>;
         static_assert(alignof(buffer_placeholder_t) == buffer_alignment,"");
         
-        // [AudioElement] beginning of the 1st cache line
+        ////// [AudioElement] beginning of the 1st cache line
+        
         union {
             buffer_placeholder_t placeholder; // used to constrain alignment
             T buffer[n_frames_per_buffer];
         };
 
-        // [AudioElement<float>] beginning of the 2nd cache line
-        // [AudioElement<double>] beginning of the 3rd cache line
+        ////// [AudioElement<float>] beginning of the 2nd cache line
+        ////// [AudioElement<double>] beginning of the 3rd cache line
+        
         bool empty : 1;
         bool clock_ : 1;
         

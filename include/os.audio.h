@@ -160,7 +160,7 @@ namespace imajuscule {
             bool do_wakeup() override;
             bool do_sleep() override;
         private:
-            static constexpr auto AUDIO_UNUSED_FRAME_COUNT_FOR_SLEEP = 100;
+            static constexpr auto AUDIO_UNUSED_FRAME_COUNT_FOR_SLEEP = 689; // is 1s. when 64 frames / callback
             AudioIn() : Activator ( AUDIO_UNUSED_FRAME_COUNT_FOR_SLEEP ),
             data( *this ),
             bInitialized_(false)
@@ -235,6 +235,7 @@ namespace imajuscule {
         }
         
         Sounds & editSounds() { return sounds; }
+        Oscillator<float> & oscillator() { return data.oscillator(); }
     };
 
     class Audio {

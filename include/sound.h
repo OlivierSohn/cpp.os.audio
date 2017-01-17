@@ -48,6 +48,10 @@ namespace imajuscule {
     
     constexpr int SAMPLE_RATE = 44100;
     
+    constexpr float int_period_to_freq(int period) {
+        return SAMPLE_RATE / static_cast<float>(period);
+    }
+    
     constexpr int freq_to_int_period( float freq_hz ) {
         if(freq_hz <= 0.f) {
             return 1;
@@ -93,7 +97,7 @@ namespace imajuscule {
         auto begin() { return values.begin(); }
         auto end() { return values.end(); }
 
-        std::vector<float> values;
+        cacheline_aligned_allocated::vector<float> values;
     };
     
     class Sounds {

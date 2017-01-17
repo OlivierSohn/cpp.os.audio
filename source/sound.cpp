@@ -28,6 +28,7 @@ static float saw( float angle_radians ) {
     // 0 .. 2 -> 1 .. -1
     return 1.f - angle_radians;
 }
+
 static float square( float angle_radians ) {
     A(angle_radians >= 0.f);
     A(angle_radians <= 2.f * (float)M_PI);
@@ -106,7 +107,7 @@ soundBuffer::soundBuffer( soundId const & id ) {
         }
 
         case Sound::SINE:
-            generate( id.period_length, sinf );
+            generate( id.period_length, sinf ); // todo measure if it is faster to use a temporary oscillator to generate the values
             break;
             
         case Sound::TRIANGLE:
