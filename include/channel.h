@@ -45,6 +45,40 @@ namespace imajuscule {
     
     struct Channel : public NonCopyable {
         
+        static constexpr float base_amplitude = 0.1f; // ok to have 10 chanels at max amplitude at the same time
+        static constexpr unsigned int volume_transition_length = 2000;
+        // make sure we'll have no overflow on volume_transition_remaining
+        static_assert(volume_transition_length < (1 << 16), "");
+
+        uint16_t volume_transition_remaining;
+
+    private:
+        // if next is false, the current crossfade is between two requests,
+        // else the current crossfade is from or to 'empty'
+        bool next : 1;
+        
+        unsigned int total_n_writes : relevantBits(AudioElementBase::n_frames_per_buffer);
+        unsigned int initial_audio_element_consummed : relevantBits(AudioElementBase::n_frames_per_buffer - 1);
+        
+        QueuedRequest current;
+        QueuedRequest previous;
+        int size_half_xfade;
+        int32_t remaining_samples_count = 0;
+        int32_t current_next_sample_index = 0;
+        int32_t other_next_sample_index = 0;
+        
+    public:
+        struct Volume {
+            float current = 1.f;
+            float increments = 0.f;
+        };
+        std::array<Volume, nAudioOut> volumes;
+        
+    private:
+        std::queue<QueuedRequest> requests;
+
+    public:
+        
         void set_xfade(int const size_xfade) {
             A(!isPlaying()); // do not call this method while playing
             A( 1 == size_xfade % 2);
@@ -63,35 +97,6 @@ namespace imajuscule {
         }
         
         void step(SAMPLE * outputBuffer, int nFrames, unsigned int audio_element_consummed);
-        
-        static constexpr float base_amplitude = 0.1f; // ok to have 10 chanels at max amplitude at the same time
-
-        static constexpr unsigned int volume_transition_length = 2000;
-        // make sure we'll have no overflow on volume_transition_remaining
-        static_assert(volume_transition_length < (1 << 16), "");
-        uint16_t volume_transition_remaining;
-
-    private:
-        // if next is false, the current crossfade is between two requests,
-        // else the current crossfade is from or to 'empty'
-        bool next : 1;
-        
-        unsigned int total_n_writes : relevantBits(AudioElementBase::n_frames_per_buffer);
-        unsigned int initial_audio_element_consummed : relevantBits(AudioElementBase::n_frames_per_buffer - 1);
-        
-        Request current;
-        Request previous;
-        int size_half_xfade;
-        int32_t remaining_samples_count = 0;
-        int32_t current_next_sample_index = 0;
-        int32_t other_next_sample_index = 0;
-        
-    public:
-        struct Volume {
-            float current = 1.f;
-            float increments = 0.f;
-        };
-        std::array<Volume, nAudioOut> volumes;
         
         bool addRequest(Request r) {
             if(r.duration_in_frames < 2*get_size_xfade()) {
@@ -112,27 +117,30 @@ namespace imajuscule {
     private:
         
         bool consume() {
-            previous = current;
             auto current_next_sample_index_backup = current_next_sample_index;
             A(remaining_samples_count == 0);
             if (requests.empty()) {
                 A(!next); // because we have started the crossfade and have detected that there is no more requests to process
                 if(!current.buffer) {
+                    previous = std::move(current);
                     return false;
                 }
+                previous = std::move(current);
+                A(!current.buffer); // move reset it
                 // emulate a right xfade 'to zero'
-                current.reset();
                 current.duration_in_frames = get_size_xfade()-1; // to do the right xfade
                 remaining_samples_count = size_half_xfade;  // to do the right xfade
                 current_next_sample_index = 0;
             }
             else if(!next && !current.buffer) {
+                previous = std::move(current);
                 // emulate a left xfade 'from zero'
                 current.duration_in_frames = 2 * get_size_xfade(); // to skip the right xfade
                 remaining_samples_count = size_half_xfade + 1; // to skip the normal writes and begin the left xfade
             }
             else {
-                current = requests.front();
+                previous = std::move(current);
+                current = std::move(requests.front());
                 requests.pop();
                 
                 A(current.duration_in_frames >= 0);
@@ -158,7 +166,7 @@ namespace imajuscule {
             }
         }
         
-        void write_single_SoundBuffer(SAMPLE * outputBuffer, int n_writes, soundBuffer const & buf, float volume) {
+        void write_single_SoundBuffer(SAMPLE * outputBuffer, int n_writes, soundBuffer::buffer const & buf, float volume) {
             auto const s = (int) buf.size();
             for( int i=0; i<n_writes; ++i) {
                 if( current_next_sample_index == s ) {
@@ -515,7 +523,5 @@ namespace imajuscule {
             A(remaining_samples_count == 0); // we are sure the xfade is finished
             return consume();
         }
-        
-        std::queue<Request> requests;
-    };  
+    };
 }

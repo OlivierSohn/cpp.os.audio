@@ -90,15 +90,6 @@ bool outputData::closeChannel(uint8_t channel_id) {
     return channels.empty();
 }
 
-void outputData::play( uint8_t channel_id, StackVector<Request> && v ) {
-    RAIILock l(used);
-    
-    auto & c = editChannel(channel_id);
-    for( auto & sound : v ) {
-        c.addRequest( std::move(sound) );
-    }
-}
-
 void outputData::setVolume(uint8_t channel_id, channelVolumes volumes) {
     // no need to lock
     auto & c = editChannel(channel_id);

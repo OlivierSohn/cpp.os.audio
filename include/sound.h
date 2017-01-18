@@ -79,7 +79,17 @@ namespace imajuscule {
     };
     
     struct soundBuffer {
-        using FPT = float;
+        using value_type = float;
+        using FPT = value_type;
+        
+        using buffer = cacheline_aligned_allocated::vector<value_type>;
+        
+        // no copy
+        soundBuffer(const soundBuffer &) = delete;
+        soundBuffer & operator=(const soundBuffer&) = delete;
+
+        soundBuffer(soundBuffer &&) = default;
+        soundBuffer& operator = (soundBuffer &&) = default;
         
         bool empty() const { return values.empty(); }
         auto size() const { return values.size(); }
@@ -93,6 +103,8 @@ namespace imajuscule {
         
         soundBuffer( soundId const & );
         
+        auto & getBuffer() { return values; }
+        
     private:
         template < typename F >
         void generate( int period, F );
@@ -100,13 +112,13 @@ namespace imajuscule {
         auto begin() { return values.begin(); }
         auto end() { return values.end(); }
 
-        cacheline_aligned_allocated::vector<FPT> values;
+        buffer values;
     };
     
     class Sounds {
         std::map< soundId, soundBuffer > sounds;
     public:
-        soundBuffer const & get( soundId );
+        soundBuffer & get( soundId );
     };
     
 }

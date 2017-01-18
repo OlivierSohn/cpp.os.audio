@@ -136,7 +136,7 @@ soundBuffer::soundBuffer( soundId const & id ) {
     }
 }
 
-soundBuffer const & Sounds::get(soundId id ) {
+soundBuffer & Sounds::get(soundId id ) {
     {
         auto it = sounds.find(id);
         if( it != sounds.end() ) {

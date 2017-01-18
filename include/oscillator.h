@@ -14,12 +14,22 @@ namespace imajuscule {
         // each of them have 16 frames worth of data in their buffer
         static constexpr auto n_frames_per_buffer = cache_line_n_bytes / 4;
         static constexpr auto buffer_alignment = cache_line_n_bytes;
+    
+        static constexpr auto index_state = 0;
     };
     
+    template<typename T>
+    auto & state(T * buffer) { return buffer[AudioElementBase::index_state]; }
+
     template<typename T>
     struct AudioElement : public AudioElementBase {
         using buffer_placeholder_t = std::aligned_storage_t<n_frames_per_buffer * sizeof(T), buffer_alignment>;
         static_assert(alignof(buffer_placeholder_t) == buffer_alignment,"");
+        
+        // state values must be distinct from every possible valid value
+        static constexpr auto queued() { return -std::numeric_limits<T>::infinity(); } // in *** at most *** one queue
+        static constexpr auto inactive() { return std::numeric_limits<T>::infinity(); }// not active in any queue
+        
         
         ////// [AudioElement] beginning of the 1st cache line
         
@@ -39,7 +49,10 @@ namespace imajuscule {
         
         AudioElement() : empty(true) {
             A(0 == reinterpret_cast<unsigned long>(buffer) % buffer_alignment);
+            state(buffer) = inactive();
         }
+        
+        auto getState() const { return state(buffer); }
     };
     
     /*
@@ -255,4 +268,5 @@ namespace imajuscule {
     std::function<void(bool)> fCompute(T & e) {
         return FCompute<T>::get(e);
     }
+
 }
