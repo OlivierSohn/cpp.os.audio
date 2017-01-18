@@ -8,13 +8,16 @@ namespace imajuscule {
     template<typename T>
     void onQueued(T * buffer) {
         using AE = AudioElement<T>;
-        A(state(buffer) == AE::inactive());
+        A(state(buffer) == AE::inactive()); // to be sure at most one channel uses it
         state(buffer) = AE::queued();
     }
     
     template<typename T>
     void onUnqueued(T * buffer) {
         using AE = AudioElement<T>;
+        A(state(buffer) != AE::inactive()); // to be sure at most one channel uses it
+        // note that if state is AE::queued(), it means no computation occured on this buffer
+        // (indicating the channel has been interrupted)
         state(buffer) = AE::inactive();
     }
     
