@@ -51,10 +51,6 @@ namespace imajuscule {
     struct PCOscillator : AudioElement<T> {
         using typename AudioElement<T>::Tr;
         
-        using AudioElement<T>::buffer;
-        using AudioElement<T>::clock_;
-        using AudioElement<T>::empty;
-        
         PCOscillator() = default;
         PCOscillator(T angle_increments) { setAngleIncrements(angle_increments); }
         
@@ -74,24 +70,6 @@ namespace imajuscule {
             else if(angle_ < Tr::zero()) {
                 angle_ += Tr::two();
             }
-        }
-        
-        void compute(bool const sync_clock) {
-            if(empty) {
-                empty = false;
-            }
-            else if(sync_clock == clock_) {
-                return;
-            }
-            clock_ = sync_clock;
-            for(auto & e : buffer) {
-                step();
-                e = imag(); // sinus
-            }
-        }
-        
-        std::function<void(bool)> fCompute() {
-            return [this](bool clck) { compute(clck); };
         }
         
         T real() const { return std::cos(M_PI*angle_); }
@@ -114,10 +92,6 @@ namespace imajuscule {
     struct Oscillator : AudioElement<T> {
         using typename AudioElement<T>::Tr;
 
-        using AudioElement<T>::buffer;
-        using AudioElement<T>::clock_;
-        using AudioElement<T>::empty;
-
         constexpr Oscillator(T angle_increments) { setAngleIncrements(angle_increments); }
         constexpr Oscillator() : mult(Tr::one(), Tr::zero()) {}
         
@@ -132,20 +106,6 @@ namespace imajuscule {
             }
             else {
                 normalize();
-            }
-        }
-        
-        void compute(bool const sync_clock) {
-            if(empty) {
-                empty = false;
-            }
-            else if(sync_clock == clock_) {
-                return;
-            }
-            clock_ = sync_clock;
-            for(auto & e : buffer) {
-                step();
-                e = imag(); // sinus
             }
         }
         
@@ -175,10 +135,6 @@ namespace imajuscule {
         static_assert(std::is_same<T,float>::value, "non float interpolation is not supported");
         
         using typename AudioElement<T>::Tr;
-
-        using AudioElement<T>::buffer;
-        using AudioElement<T>::clock_;
-        using AudioElement<T>::empty;
 
         Ramp(T from_,
              T to_,
@@ -211,20 +167,6 @@ namespace imajuscule {
             cur_sample += C * f ;
         }
         
-        void compute(bool const sync_clock) {
-            if(empty) {
-                empty = false;
-            }
-            else if(sync_clock == clock_) {
-                return;
-            }
-            clock_ = sync_clock;
-            for(auto & e : buffer) {
-                step();
-                e = real();
-            }
-        }
-
         T real() const { return osc.real(); }
         T imag() const { return osc.imag(); }
         
@@ -268,4 +210,49 @@ namespace imajuscule {
         W1 & w1;
         W2 & w2;
     };
+    
+    template<typename T>
+    void computeAudioElement(T & ae, bool const sync_clock) {
+        auto & e = static_cast<AudioElement<typename T::FPT>&>(ae);
+        
+        if(e.empty) {
+            e.empty = false;
+        }
+        else if(sync_clock == e.clock_) {
+            return;
+        }
+        e.clock_ = sync_clock;
+        for(auto & v : e.buffer) {
+            ae.step();
+            v = ae.imag();
+        }
+    }
+    
+    template<typename T>
+    struct FCompute {
+        template<typename U=T>
+        static auto get(U & e)
+        -> std::enable_if_t<
+        IsDerivedFrom<U, AudioElementBase>::Is,
+        std::function<void(bool)>
+        >
+        {
+            return [&e](bool clck) { computeAudioElement(e, clck); };
+        }
+
+        template<typename U=T>
+        static auto get(U & e)
+        -> std::enable_if_t<
+        !IsDerivedFrom<U, AudioElementBase>::Is,
+        std::function<void(bool)>
+        >
+        {
+            return {};
+        }
+    };
+    
+    template<typename T>
+    std::function<void(bool)> fCompute(T & e) {
+        return FCompute<T>::get(e);
+    }
 }

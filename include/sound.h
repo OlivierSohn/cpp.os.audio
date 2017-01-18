@@ -93,7 +93,6 @@ namespace imajuscule {
         
         soundBuffer( soundId const & );
         
-        std::function<void(bool)> fCompute() const { return {}; }
     private:
         template < typename F >
         void generate( int period, F );
