@@ -7,16 +7,10 @@ namespace imajuscule {
         class RAIILock {
         public:
             RAIILock( std::atomic_bool & l ) : l(l) {
-                bool bFalse( false );
-                // TODO check the way we use locks, this is different from RAIILock in sensor.h
-                
-                while (!l.compare_exchange_strong(bFalse, true,
-                                                  std::memory_order_acquire,
-                                                  std::memory_order_relaxed))
-                {}
+                while (l.exchange(true)) { }
             }
             ~RAIILock() {
-                l.store(false, std::memory_order_release);
+                l = false;
             }
         private:
             std::atomic_bool & l;
@@ -33,12 +27,54 @@ namespace imajuscule {
         float attenuation;
     };
     
+    
+    template<typename T, typename Init, size_t... Inds>
+    std::array<T, sizeof...(Inds)> makeArrayImpl(Init val, std::integer_sequence<size_t, Inds...>)
+    {
+        return { (val + (Inds - Inds))... };
+    }
+    
+    template<typename T, int N, typename Init>
+    std::array<T, N> makeArray(Init val)
+    {
+        return makeArrayImpl<T, Init>(val, std::make_index_sequence<N>{});
+    }
+
+    struct Compressor {
+        // some parts inspired from https://github.com/audacity/audacity/blob/master/src/effects/Compressor.cpp
+        
+        static constexpr auto length_sliding_avg = 40;
+        
+        Compressor(Compressor&&) = default;
+        Compressor& operator=(Compressor&&) = default;
+        
+        Compressor() : avgs(makeArray<slidingAverage<float, KEEP_INITIAL_VALUES>, nAudioOut>(length_sliding_avg)) {
+        }
+        std::array<slidingAverage<float, KEEP_INITIAL_VALUES>, nAudioOut> avgs;
+        
+        float threshold = 0.5f;
+        static constexpr auto ratio = 3.f;
+        float compression = 1.f-1.f/ratio;
+        float compute(float value, float env)
+        {
+            if(env <= 0.f) {
+                return 0.f;
+            }
+            return value * powf(threshold/env, compression);
+        }
+    };
+
     using channelVolumes = std::array<float, nAudioOut>;
     
     // reserved number to indicate "no channel"
     static constexpr auto AUDIO_CHANNEL_NONE = std::numeric_limits<uint8_t>::max();
     
-    struct outputData {
+    enum class PostProcess {
+        COMPRESS,
+        NONE
+    };
+    template<PostProcess Post = PostProcess::NONE>
+    struct outputDataBase {
     private:
         std::atomic_bool used { false }; // maybe we need two level of locks, one here for the vector and many inside for the elements
         
@@ -59,7 +95,10 @@ namespace imajuscule {
 
         // this could be replaced by traversing the pool of AudioElements, and
         // computing the ones that are active.
-        std::vector<std::function<bool(bool)>> audioElements_computes;
+        using postProcessFunc = std::function<void(float*)>;
+
+        std::vector<AudioElementComputeFunc> audioElements_computes;
+        std::vector<postProcessFunc> post_process;
         
 #if WITH_DELAY
         std::vector< DelayLine > delays;
@@ -70,16 +109,90 @@ namespace imajuscule {
 #endif
         
     public:
-        outputData();
-        
+        outputDataBase()
+        :
+#if WITH_DELAY
+        delays{{1000, 0.6f},{4000, 0.2f}, {4300, 0.3f}, {5000, 0.1f}},
+#endif
+        clock_(false),
+        consummed_frames(0)
+        /*
+         ,ramp(300.f,
+         600.f,
+         ramp_duration_seconds * SAMPLE_RATE,
+         itp::EASE_INOUT_QUINT)*/
+        {
+            // to avoid reallocations when we hold the lock
+            // we allocate all we need for channel management now:
+            channels.reserve(std::numeric_limits<uint8_t>::max());
+            autoclosing_ids.reserve(std::numeric_limits<uint8_t>::max());
+            available_ids.reserve(std::numeric_limits<uint8_t>::max());
+            if(Post == PostProcess::COMPRESS) {
+                post_process.push_back([](float v[nAudioOut]) mutable {
+                    static Compressor c;
+                    float avg = 0.f;
+                    for(int i=0; i<nAudioOut; ++i) {
+                        c.avgs[i].feed(std::abs(v[i]));
+                        avg = std::max(avg, c.avgs[i].compute());
+                    }
+                    for(int i=0; i<nAudioOut; ++i) {
+                        v[i] = c.compute(v[i], avg);
+                    }
+                });
+            }
+            // hard limit
+            post_process.emplace_back([](float v[nAudioOut]) {
+                for(int i=0; i<nAudioOut; ++i) {
+                    if(likely(-1.f < v[i] && v[i] < 1.f)) {
+                        continue;
+                    }
+                    
+                    if(v[i] > 1.f) {
+                        v[i] = 1.f;
+                    }
+                    else if(v[i] < -1.f) {
+                        v[i] = -1.f;
+                    }
+                    else {
+                        v[i] = 0.f; // NaN...
+                    }
+                }
+            });
+        }
+
         // called from audio callback
-        void step(SAMPLE * outputBuffer, int nFrames);
+        void step(SAMPLE *outputBuffer, int nFrames) {
+            Sensor::RAIILock l(used);
+            
+            if(consummed_frames != 0) {
+                // finish consuming previous buffers
+                if(!consume_buffers(outputBuffer, nFrames)) {
+                    return;
+                }
+            }
+            
+            while(true) {
+                // the previous buffers are consumed, we need to compute them again
+                computeNextAudioElementsBuffers();
+                
+                if(!consume_buffers(outputBuffer, nFrames)) {
+                    return;
+                }
+            }
+        }
         
         // called from main thread
-        uint8_t openChannel(channelVolumes volume, ChannelClosingPolicy, int xfade_length);
         Channel & editChannel(uint8_t id) { return channels[id]; }
         Channel const & getChannel(uint8_t id) const { return channels[id]; }
         bool empty() const { return channels.empty(); }
+        void setVolume(uint8_t channel_id, channelVolumes volumes) {
+            // no need to lock, this is called from the main thread
+            auto & c = editChannel(channel_id);
+            c.volume_transition_remaining = Channel::volume_transition_length;
+            for(int i=0; i<nAudioOut; ++i) {
+                c.volumes[i].increments = (volumes[i] - c.volumes[i].current) / (float) Channel::volume_transition_length;
+            }
+        }
         
         template<class... Args>
         void playGeneric( uint8_t channel_id, Args&&... requests) {
@@ -104,13 +217,60 @@ namespace imajuscule {
             playNolock(channel_id, std::move(v));
         }
         
-        void setVolume( uint8_t channel_id, channelVolumes );
-        void closeChannel(uint8_t channel_id);
         void closeAllChannels() {
             Sensor::RAIILock l(used);
             channels.clear();
         }
 
+        uint8_t openChannel(channelVolumes volume, ChannelClosingPolicy l, int xfade_length) {
+            uint8_t id = AUDIO_CHANNEL_NONE;
+            if(channels.size() == std::numeric_limits<uint8_t>::max() && available_ids.size() == 0) {
+                // Channels are at their maximum number and all are used...
+                // Let's find one that is autoclosing and not playing :
+                for( auto it = autoclosing_ids.begin(), end = autoclosing_ids.end(); it != end; ++it )
+                {
+                    id = *it;
+                    {
+                        // take the lock in the loop so that at the end of each iteration
+                        // the audio thread has a chance to run
+                        Sensor::RAIILock l(used);
+                        if(channels[id].isPlaying()) {
+                            continue;
+                        }
+                    }
+                    // channel 'id' is auto closing and not playing, so we will assign it to the caller.
+                    if(l != AutoClose) {
+                        autoclosing_ids.erase(it);
+                    }
+                    break;
+                }
+            }
+            else {
+                id = available_ids.Take(channels);
+                if(l == AutoClose) {
+                    autoclosing_ids.push_back(id);
+                    A(autoclosing_ids.size() <= std::numeric_limits<uint8_t>::max());
+                    // else logic error : some users closed manually some autoclosing channels
+                }
+            }
+            // no need to lock here : the channel is not active
+            for(auto i=0; i<nAudioOut; ++i) {
+                editChannel(id).volumes[i].current = volume[i];
+            }
+            editChannel(id).set_xfade(xfade_length);
+            A(id != AUDIO_CHANNEL_NONE);
+            return id;
+        }
+        
+        void closeChannel(uint8_t channel_id)
+        {
+            {
+                Sensor::RAIILock l(used);
+                editChannel(channel_id).stopPlaying();
+            }
+            available_ids.Return(channel_id);
+        }
+        
     private:
         template<typename F>
         void registerAudioElementCompute(F f) {
@@ -178,6 +338,12 @@ namespace imajuscule {
                                            // the next computation of AudioElements will occur
             }
 
+            for(int i=0; i<nFrames; ++i) {
+                for(auto const & f: post_process) {
+                    f(&outputBuffer[i*nAudioOut]); // or call the lambda for the whole buffer at once?
+                }
+            }
+
 #if WITH_DELAY
             for( auto & delay : delays ) {
                 // todo low pass filter for more realism
@@ -186,4 +352,6 @@ namespace imajuscule {
 #endif
         }
     };
+    
+    using outputData = outputDataBase<PostProcess::COMPRESS>;
 }

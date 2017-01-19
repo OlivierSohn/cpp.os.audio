@@ -18,9 +18,9 @@
 
 #include "sound.defines.h"
 #include "oscillator.h"
+#include "stereo.h"
 #include "sound.h"
 #include "request.h"
-#include "stereo.h"
 #include "channel.h"
 #include "out.h"
 #include "note.h"

@@ -148,16 +148,16 @@ namespace imajuscule {
     };
  
     template<typename T>
-    struct Ramp : AudioElement<T> {
+    struct FreqRamp : AudioElement<T> {
         
         static_assert(std::is_same<T,float>::value, "non float interpolation is not supported");
         
         using typename AudioElement<T>::Tr;
-
-        Ramp(T from_,
-             T to_,
-             T duration_in_samples,
-             itp::interpolation i = itp::LINEAR) :
+        
+        FreqRamp(T from_,
+                 T to_,
+                 T duration_in_samples,
+                 itp::interpolation i = itp::LINEAR) :
         from(angle_increment_from_freq(from_)),
         to(angle_increment_from_freq(to_)),
         duration_in_samples(duration_in_samples),
@@ -258,14 +258,16 @@ namespace imajuscule {
         A(e.getState() != AE::inactive());
         return true;
     }
-    
+
+    using AudioElementComputeFunc = std::function<bool(bool)>;
+
     template<typename T>
     struct FCompute {
         template<typename U=T>
         static auto get(U & e)
         -> std::enable_if_t<
         IsDerivedFrom<U, AudioElementBase>::Is,
-        std::function<bool(bool)>
+        AudioElementComputeFunc
         >
         {
             return [&e](bool clck) { return computeAudioElement(e, clck); };
@@ -275,7 +277,7 @@ namespace imajuscule {
         static auto get(U & e)
         -> std::enable_if_t<
         !IsDerivedFrom<U, AudioElementBase>::Is,
-        std::function<bool(bool)>
+        AudioElementComputeFunc
         >
         {
             return {};
@@ -283,7 +285,7 @@ namespace imajuscule {
     };
     
     template<typename T>
-    std::function<bool(bool)> fCompute(T & e) {
+    AudioElementComputeFunc fCompute(T & e) {
         return FCompute<T>::get(e);
     }
 

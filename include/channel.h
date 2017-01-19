@@ -1,6 +1,5 @@
 
 namespace imajuscule {
-    constexpr unsigned int nAudioOut = 2; // note that on some systems, if there is only one output portaudio may refuse to open the stream
 
     struct MakeVolume {
         template<int J = nAudioOut>
