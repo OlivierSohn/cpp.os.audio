@@ -21,12 +21,15 @@ static float saw( float angle_radians ) {
     A(angle_radians >= 0.f);
     A(angle_radians <= 2.f * (float)M_PI);
     
-    static const float inv_pi = 1.f / (float)M_PI;
+    static constexpr float inv_pi = 1.f / (float)M_PI;
     
     angle_radians *= inv_pi;
-    
-    // 0 .. 2 -> 1 .. -1
-    return 1.f - angle_radians;
+    if( angle_radians <= 1.f ) {        // 0 .. 1   ->  0 .. 1
+        return angle_radians;
+    } else {                            // 1 .. 2   ->  -1 .. 0
+        A( angle_radians <= 2.f );
+        return -2.f + angle_radians;
+    }
 }
 
 static float square( float angle_radians ) {
@@ -37,10 +40,9 @@ static float square( float angle_radians ) {
     
     angle_radians *= inv_pi;
     
-    if( angle_radians <= 1.f ) { // 0 .. 1 ->  1
+    if( angle_radians <= 0.5f || angle_radians >= 1.5f ) {
         return 1.f;
-    } else {                    // 1 .. 2 ->  -1
-        A(angle_radians <= 2.f);
+    } else {
         return -1.f;
     }
 }
