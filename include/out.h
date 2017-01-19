@@ -79,6 +79,7 @@ namespace imajuscule {
         uint8_t openChannel(channelVolumes volume, ChannelClosingPolicy, int xfade_length);
         Channel & editChannel(uint8_t id) { return channels[id]; }
         Channel const & getChannel(uint8_t id) const { return channels[id]; }
+        bool empty() const { return channels.empty(); }
         
         template<class... Args>
         void playGeneric( uint8_t channel_id, Args&&... requests) {
@@ -104,16 +105,15 @@ namespace imajuscule {
         }
         
         void setVolume( uint8_t channel_id, channelVolumes );
-        bool closeChannel(uint8_t channel_id);
+        void closeChannel(uint8_t channel_id);
         
+    private:
         template<typename F>
         void registerAudioElementCompute(F f) {
-            Sensor::RAIILock l(used);
             // todo prevent reallocation here to not block audio...
             audioElements_computes.push_back(std::move(f));
         }
         
-    private:
         void playNolock( uint8_t channel_id, StackVector<Request> && v) {
             auto & c = editChannel(channel_id);
             for( auto & sound : v ) {

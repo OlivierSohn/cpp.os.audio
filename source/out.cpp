@@ -83,13 +83,12 @@ uint8_t outputData::openChannel(channelVolumes volume, ChannelClosingPolicy l, i
     return id;
 }
 
-bool outputData::closeChannel(uint8_t channel_id) {
+void outputData::closeChannel(uint8_t channel_id) {
     {
         RAIILock l(used);
         editChannel(channel_id).stopPlaying();
     }
     available_ids.Return(channel_id);
-    return channels.empty();
 }
 
 void outputData::setVolume(uint8_t channel_id, channelVolumes volumes) {

@@ -58,6 +58,7 @@ namespace imajuscule {
         }
         
         auto getState() const { return state(buffer); }
+        constexpr bool isInactive() const { return getState() == inactive(); }
     };
     
     /*

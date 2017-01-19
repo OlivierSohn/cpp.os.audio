@@ -199,12 +199,18 @@ namespace imajuscule {
             data.play( channel_id, std::move( v ) );
         }
         
+        template<class ...Args>
+        void playGeneric( uint8_t channel_id, Args&& ...args ) {
+            data.playGeneric( channel_id, std::forward<Args>( args )... );
+        }
+        
         void setVolume( uint8_t channel_id, channelVolumes volumes ) {
             data.setVolume( channel_id, volumes);
         }
 
         void closeChannel(uint8_t channel_id) {
-            if( data.closeChannel( channel_id ) ) {
+            data.closeChannel( channel_id );
+            if( data.empty() ) {
                 TearDown();
             }
         }

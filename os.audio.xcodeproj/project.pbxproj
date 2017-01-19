@@ -52,6 +52,7 @@
 		09C84A4C1C271D95002CF5B7 /* Project.Shared.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Project.Shared.xcconfig; sourceTree = "<group>"; };
 		09CA7B291E05A25600E9CDF3 /* public.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = public.h; path = include/public.h; sourceTree = "<group>"; };
 		09CA7B2A1E05A27C00E9CDF3 /* private.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = private.h; path = source/private.h; sourceTree = "<group>"; };
+		09E166FB1E306C8300822112 /* sound.defines.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = sound.defines.h; path = include/sound.defines.h; sourceTree = "<group>"; };
 		09E7B11C1BB5C64E007BAA5F /* libos.audio.osx.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libos.audio.osx.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		09E7B1271BB5C729007BAA5F /* libos.audio.ios.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libos.audio.ios.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		09E7B1301BB5CA01007BAA5F /* os.audio.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; lineEnding = 0; name = os.audio.cpp; path = source/os.audio.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
@@ -137,6 +138,7 @@
 				09C645AD1E0ADCEE00153C61 /* parse.music.h */,
 				09CA7B291E05A25600E9CDF3 /* public.h */,
 				09C645B41E0EC98300153C61 /* request.h */,
+				09E166FB1E306C8300822112 /* sound.defines.h */,
 				09C645AC1E0ADC9800153C61 /* sound.h */,
 				09C682D31E28945600C2716D /* stereo.h */,
 			);

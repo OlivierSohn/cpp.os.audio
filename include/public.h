@@ -16,8 +16,9 @@
 #include "../../wiremodeler/include/public.h"
 #include "../../cg.math/include/public.h"
 
-#include "sound.h"
+#include "sound.defines.h"
 #include "oscillator.h"
+#include "sound.h"
 #include "request.h"
 #include "stereo.h"
 #include "channel.h"
