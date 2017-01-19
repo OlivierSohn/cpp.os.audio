@@ -128,6 +128,12 @@ namespace imajuscule {
             autoclosing_ids.reserve(std::numeric_limits<uint8_t>::max());
             available_ids.reserve(std::numeric_limits<uint8_t>::max());
             if(Post == PostProcess::COMPRESS) {
+                // doesn't work : in TEST_F(AudioLimiting, CompressionSine),
+                // the beginning is wrong.
+                // I should rethink the way to do it. I'm not even sure I will
+                // need that in the future.
+
+                /*
                 post_process.push_back([](float v[nAudioOut]) mutable {
                     static Compressor c;
                     float avg = 0.f;
@@ -139,11 +145,12 @@ namespace imajuscule {
                         v[i] = c.compute(v[i], avg);
                     }
                 });
+                 */
             }
             // hard limit
             post_process.emplace_back([](float v[nAudioOut]) {
                 for(int i=0; i<nAudioOut; ++i) {
-                    if(likely(-1.f < v[i] && v[i] < 1.f)) {
+                    if(likely(-1.f <= v[i] && v[i] <= 1.f)) {
                         continue;
                     }
                     
@@ -154,7 +161,7 @@ namespace imajuscule {
                         v[i] = -1.f;
                     }
                     else {
-                        v[i] = 0.f; // NaN...
+                        v[i] = 0.f; // v[i] is NaN
                     }
                 }
             });
