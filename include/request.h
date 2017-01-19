@@ -26,21 +26,13 @@ namespace imajuscule {
     using AE64Buffer = double *;
 
     struct QueuedRequest;
-    
+
     struct TaggedBuffer {
         friend class QueuedRequest;
         
-        explicit TaggedBuffer(std::nullptr_t)
-        : is_32(false), is_AudioElement(false), buffer(nullptr) {}
-
-        explicit TaggedBuffer(soundBuffer * buf)
-        : is_32(true), is_AudioElement(false), buffer(buf) {}
-
-        explicit TaggedBuffer(AE32Buffer buf)
-        : is_32(true), is_AudioElement(true), buffer(buf) {}
-        
-        explicit TaggedBuffer(AE64Buffer buf)
-        : is_32(false), is_AudioElement(true), buffer(buf) {}
+        template<typename T>
+        explicit TaggedBuffer(T buf)
+        : buffer(buf) {}
         
         void reset() {
             *this = TaggedBuffer{nullptr};
@@ -51,55 +43,59 @@ namespace imajuscule {
         }
         
         soundBuffer::buffer & asSoundBuffer() const {
-            A(is_32 && !is_AudioElement && buffer.sound);
-            return *buffer.sound;
+            auto ptr = buffer.soundBuffer();
+            A(is32() && !isAudioElement() && ptr);
+            return *ptr;
         }
         
         AE32Buffer asAudioElement32() const {
-            A(is_32 && is_AudioElement && buffer.audioelement_32);
-            return buffer.audioelement_32;
+            auto ptr = buffer.audioElement32();
+            A(is32() && isAudioElement() && ptr);
+            return ptr;
         }
         
         AE64Buffer asAudioElement64() const {
-            A(!is_32 && is_AudioElement && buffer.audioelement_64);
-            return buffer.audioelement_64;
+            auto ptr = buffer.audioElement64();
+            A(!is32() && isAudioElement() && ptr);
+            return ptr;
         }
         
         bool null() const {
             // this is not strictly legal, as we dont check the tags
             // to see which of the union members is active...
-            return !buffer.sound;
+            return !buffer.soundBuffer();
         }
         
         bool valid() const {
-            if(is_AudioElement) {
+            if(isAudioElement()) {
                 return !null();
             }
-            if(!is_32) {
+            if(!is32()) {
                 return false;
             }
-            return buffer.sound && !buffer.sound->empty();
+            auto ptr = buffer.soundBuffer();
+            return ptr && !ptr->empty();
         }
         
-        bool isSoundBuffer() const { return !is_AudioElement; }
-        bool isAudioElement() const { return is_AudioElement; }
+        bool isSoundBuffer() const { return !buffer.flags.is_AudioElement; }
+        bool isAudioElement() const { return buffer.flags.is_AudioElement; }
 
-        bool is32() const { return is_32; }
+        bool is32() const { return buffer.flags.is_32; }
 
         bool isSilence() const {
-            if(is_AudioElement) {
+            if(isAudioElement()) {
                 // we cannot presume anything because
                 // values are not yet computed
                 return false;
             }
-            if(!is_32) {
+            if(!is32()) {
                 A(0);
                 return false;
             }
-            if(!buffer.sound) {
+            if(!buffer.soundBuffer()) {
                 return true;
             }
-            for(auto b : *buffer.sound) {
+            for(auto b : *buffer.soundBuffer()) {
                 if(b != 0.f) {
                     return false;
                 }
@@ -112,16 +108,43 @@ namespace imajuscule {
         }
         
     private:
-        bool is_32:1;
-        bool is_AudioElement:1;
-        
-        // all buffers are aligned on cachelines (64=2^6) meaning the 6 lower bits my be used to store information
         union buffer {
-            buffer(std::nullptr_t) : sound(nullptr) {}
-            buffer(soundBuffer * buf) : sound(buf ? &buf->getBuffer() : nullptr) {}
-            buffer(AE32Buffer buf) : audioelement_32(buf) {}
-            buffer(AE64Buffer buf) : audioelement_64(buf) {}
+            buffer(std::nullptr_t) : sound(nullptr) {
+                A(as_uintptr_t == ptr());
+                A(!flags.is_32);
+                A(!flags.is_AudioElement);
+            }
+            buffer(soundBuffer * buf) : sound(buf ? &buf->getBuffer() : nullptr) {
+                A(as_uintptr_t == ptr());
+                flags.is_32 = true;
+                A(!flags.is_AudioElement);
+            }
+            buffer(AE32Buffer buf) : audioelement_32(buf) {
+                A(buf == audioElement32());
+                flags.is_32 = true;
+                flags.is_AudioElement = true;
+            }
+            buffer(AE64Buffer buf) : audioelement_64(buf) {
+                A(buf == audioElement64());
+                A(!flags.is_32);
+                flags.is_AudioElement = true;
+            }
+
+            static constexpr auto n_low_bits_used = 2;
             
+            uintptr_t ptr() const { return removeLowBits<n_low_bits_used>(as_uintptr_t); }
+            
+            soundBuffer::buffer * soundBuffer() const { return reinterpret_cast<soundBuffer::buffer *>(ptr()); }
+            AE32Buffer audioElement32() const { return reinterpret_cast<AE32Buffer>(ptr()); }
+            AE64Buffer audioElement64() const { return reinterpret_cast<AE64Buffer>(ptr()); }
+            
+            // all buffers are aligned on cachelines (64=2^6) meaning the 6 lower bits my be used to store information
+            struct {
+                bool is_AudioElement : 1;
+                bool is_32 : 1;
+            } flags;
+            
+            uintptr_t as_uintptr_t;
             soundBuffer::buffer * sound;
             AE32Buffer audioelement_32;
             AE64Buffer audioelement_64;

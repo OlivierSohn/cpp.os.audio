@@ -12,8 +12,8 @@ namespace imajuscule {
         // AudioComponent<float> has a buffer of size 1 cache line
         // AudioComponent<double> has a buffer of size 2 cache lines
         // each of them have 16 frames worth of data in their buffer
-        static constexpr auto n_frames_per_buffer = cache_line_n_bytes / 4;
-        static constexpr auto buffer_alignment = cache_line_n_bytes;
+        static constexpr auto n_frames_per_buffer = 16;
+        static constexpr auto buffer_alignment = cache_line_n_bytes; // 64 or 32
     
         static constexpr auto index_state = 0;
     };
@@ -46,13 +46,12 @@ namespace imajuscule {
         ////// [AudioElement<float>] beginning of the 2nd cache line
         ////// [AudioElement<double>] beginning of the 3rd cache line
         
-        bool empty : 1;
         bool clock_ : 1;
         
         using FPT = T;
         using Tr = NumTraits<T>;
         
-        AudioElement() : empty(true) {
+        AudioElement() {
             A(0 == reinterpret_cast<unsigned long>(buffer) % buffer_alignment);
             state(buffer) = inactive();
         }
@@ -247,10 +246,7 @@ namespace imajuscule {
             // the next time
             return false;
         }
-        if(e.empty) {
-            e.empty = false;
-        }
-        else if(sync_clock == e.clock_) {
+        if(e.getState() != AE::queued() && (sync_clock == e.clock_)) {
             return true;
         }
         e.clock_ = sync_clock;
@@ -258,6 +254,8 @@ namespace imajuscule {
             ae.step();
             v = ae.imag();
         }
+        A(e.getState() != AE::queued());
+        A(e.getState() != AE::inactive());
         return true;
     }
     

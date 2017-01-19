@@ -106,7 +106,11 @@ namespace imajuscule {
         
         void setVolume( uint8_t channel_id, channelVolumes );
         void closeChannel(uint8_t channel_id);
-        
+        void closeAllChannels() {
+            Sensor::RAIILock l(used);
+            channels.clear();
+        }
+
     private:
         template<typename F>
         void registerAudioElementCompute(F f) {

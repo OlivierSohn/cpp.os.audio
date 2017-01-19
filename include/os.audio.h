@@ -175,6 +175,9 @@ namespace imajuscule {
     
     class AudioOut : public NonCopyable {
         AudioOut() : bInitialized(false) {}
+        ~AudioOut() {
+            data.closeAllChannels(); // needs to be called before Sounds destructor
+        }
         
         friend class Audio;
         void Init();

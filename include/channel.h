@@ -175,6 +175,7 @@ namespace imajuscule {
                 A(current_next_sample_index < s);
                 
                 A(crossfading_from_zero_remaining() <= 0);
+                A(std::abs(buf[current_next_sample_index]) < 1.1f);
                 auto val = volume * buf[current_next_sample_index];
                 stepVolume();
                 for(auto i=0; i<nAudioOut; ++i) {
@@ -191,6 +192,7 @@ namespace imajuscule {
                 A(current_next_sample_index < AudioElementBase::n_frames_per_buffer);
                 
                 A(crossfading_from_zero_remaining() <= 0);
+                A(std::abs(buf[current_next_sample_index]) < 1.1f);
                 auto val = volume * static_cast<float>(buf[current_next_sample_index]);
                 stepVolume();
                 for(auto i=0; i<nAudioOut; ++i) {
@@ -280,6 +282,7 @@ namespace imajuscule {
                         current_next_sample_index = 0;
                     }
                     A(current_next_sample_index < s);
+                    A(std::abs(current.buffer.asSoundBuffer()[current_next_sample_index]) < 1.1f);
                     val = xfade_ratio * current.volume * current.buffer.asSoundBuffer()[current_next_sample_index];
                     ++current_next_sample_index;
                 }
@@ -290,6 +293,7 @@ namespace imajuscule {
                         other_next_sample_index = 0;
                     }
                     A(other_next_sample_index <= other_s);
+                    A(std::abs((other->buffer.asSoundBuffer())[other_next_sample_index] < 1.1f));
                     val += (1.f - xfade_ratio) * other->volume * (other->buffer.asSoundBuffer())[other_next_sample_index];
                     ++other_next_sample_index;
                 }
@@ -321,6 +325,7 @@ namespace imajuscule {
             for( int i=0; i<n_writes; i++ ) {
                 A(other_next_sample_index >= 0);
                 A(other_next_sample_index < AudioElementBase::n_frames_per_buffer);
+                A(std::abs(buf2[other_next_sample_index]) < 1.1f);
                 auto val = (1.f - xfade_ratio) * volBuf2 * static_cast<float>(buf2[other_next_sample_index]);
                 ++other_next_sample_index;
                 
@@ -329,6 +334,7 @@ namespace imajuscule {
                         current_next_sample_index = 0;
                     }
                     A(current_next_sample_index < s);
+                    A(std::abs(current.buffer.asSoundBuffer()[current_next_sample_index]) < 1.1f);
                     val += xfade_ratio * current.volume * current.buffer.asSoundBuffer()[current_next_sample_index];
                     ++current_next_sample_index;
                 }
@@ -368,6 +374,7 @@ namespace imajuscule {
             for( int i=0; i<n_writes; ++i, ++current_next_sample_index) {
                 A(current_next_sample_index >= 0);
                 A(current_next_sample_index < AudioElementBase::n_frames_per_buffer);
+                A(std::abs(buf1[current_next_sample_index]) < 1.1f);
                 auto val = xfade_ratio * volBuf1 * buf1[current_next_sample_index];
                 
                 if(other_s) {
@@ -377,6 +384,7 @@ namespace imajuscule {
                         other_next_sample_index = 0;
                     }
                     A(other_next_sample_index <= other_s);
+                    A(std::abs((other->buffer.asSoundBuffer())[other_next_sample_index]) < 1.1f);
                     val += (1.f - xfade_ratio) * other->volume * (other->buffer.asSoundBuffer())[other_next_sample_index];
                     ++other_next_sample_index;
                 }
@@ -438,6 +446,9 @@ namespace imajuscule {
                 A(other_next_sample_index >= 0);
                 A(other_next_sample_index < AudioElementBase::n_frames_per_buffer);
                 
+                A(std::abs(buf1[current_next_sample_index]) < 1.1f);
+                A(std::abs(buf2[other_next_sample_index]) < 1.1f);
+
                 write_value(
                             (xfade_ratio * volBuf1 * static_cast<float>(buf1[current_next_sample_index])) +
                             (1.f - xfade_ratio) * volBuf2 * static_cast<float>(buf2[other_next_sample_index])
