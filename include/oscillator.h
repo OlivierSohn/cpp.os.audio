@@ -21,6 +21,11 @@ namespace imajuscule {
     template<typename T>
     auto & state(T * buffer) { return buffer[AudioElementBase::index_state]; }
 
+    // lifecycle :
+    // upon creation, state is inactive()
+    // when in a queue state is queued()
+    // when processed state is a float
+    // when done being played state is inactive()
     template<typename T>
     struct AudioElement : public AudioElementBase {
         using buffer_placeholder_t = std::aligned_storage_t<n_frames_per_buffer * sizeof(T), buffer_alignment>;
@@ -224,21 +229,35 @@ namespace imajuscule {
         W2 & w2;
     };
     
+    /*
+     * returns false when the buffer is done being used
+     */
     template<typename T>
-    void computeAudioElement(T & ae, bool const sync_clock) {
-        auto & e = static_cast<AudioElement<typename T::FPT>&>(ae);
+    bool computeAudioElement(T & ae, bool const sync_clock) {
+        using AE = AudioElement<typename T::FPT>;
+        auto & e = static_cast<AE&>(ae);
         
+        if(e.getState() == AE::inactive()) {
+            // Issue : if the buffer just got marked inactive,
+            // but no new AudioElementCompute happends
+            // and from the main thread someone acquires this and queues it,
+            // it will have 2 lambdas because the first lambda will never have seen the inactive state.
+            // However the issue is not major, as the 2 lambdas have a chance to be removed
+            // the next time
+            return false;
+        }
         if(e.empty) {
             e.empty = false;
         }
         else if(sync_clock == e.clock_) {
-            return;
+            return true;
         }
         e.clock_ = sync_clock;
         for(auto & v : e.buffer) {
             ae.step();
             v = ae.imag();
         }
+        return true;
     }
     
     template<typename T>
@@ -247,17 +266,17 @@ namespace imajuscule {
         static auto get(U & e)
         -> std::enable_if_t<
         IsDerivedFrom<U, AudioElementBase>::Is,
-        std::function<void(bool)>
+        std::function<bool(bool)>
         >
         {
-            return [&e](bool clck) { computeAudioElement(e, clck); };
+            return [&e](bool clck) { return computeAudioElement(e, clck); };
         }
 
         template<typename U=T>
         static auto get(U & e)
         -> std::enable_if_t<
         !IsDerivedFrom<U, AudioElementBase>::Is,
-        std::function<void(bool)>
+        std::function<bool(bool)>
         >
         {
             return {};
@@ -265,7 +284,7 @@ namespace imajuscule {
     };
     
     template<typename T>
-    std::function<void(bool)> fCompute(T & e) {
+    std::function<bool(bool)> fCompute(T & e) {
         return FCompute<T>::get(e);
     }
 

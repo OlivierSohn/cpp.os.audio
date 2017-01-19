@@ -1,3 +1,4 @@
+#define WITH_DELAY 0
 
 namespace imajuscule {
    
@@ -55,8 +56,18 @@ namespace imajuscule {
         AvailableIndexes<uint8_t> available_ids;
         std::vector<Channel> channels;
         std::vector<uint8_t> autoclosing_ids;
+
+        // this could be replaced by traversing the pool of AudioElements, and
+        // computing the ones that are active.
+        std::vector<std::function<bool(bool)>> audioElements_computes;
         
-        std::vector<std::function<void(bool)>> audioElements_computes;
+#if WITH_DELAY
+        std::vector< DelayLine > delays;
+#endif
+        
+#if TARGET_OS_IOS
+        std::vector<float> outputBuffer;
+#endif
         
     public:
         outputData();
@@ -64,25 +75,34 @@ namespace imajuscule {
         // called from audio callback
         void step(SAMPLE * outputBuffer, int nFrames);
         
-        std::vector< DelayLine > delays;
-        
-#if TARGET_OS_IOS
-        std::vector<float> outputBuffer;
-#endif
-        
         // called from main thread
         uint8_t openChannel(channelVolumes volume, ChannelClosingPolicy, int xfade_length);
         Channel & editChannel(uint8_t id) { return channels[id]; }
         Channel const & getChannel(uint8_t id) const { return channels[id]; }
-        void play( uint8_t channel_id, StackVector<Request> && v) {
+        
+        template<class... Args>
+        void playGeneric( uint8_t channel_id, Args&&... requests) {
             Sensor::RAIILock l(used);
             
-            auto & c = editChannel(channel_id);
-            for( auto & sound : v ) {
-                c.addRequest( std::move(sound) );
-            }
+            // it's important to register and enqueue in the same lock cycle
+            // else either it's too late and we miss some audio frames,
+            // or too early and the callback gets unscheduled
+            
+            auto buffers = std::make_tuple(std::ref(requests.first)...);
+            for_each(buffers, [this](auto &buf) {
+                if(auto f = fCompute(buf)) {
+                    registerAudioElementCompute(std::move(f));
+                }
+            });
+            
+            playNolock(channel_id, {std::move(requests.second)...});
         }
-
+        
+        void play( uint8_t channel_id, StackVector<Request> && v) {
+            Sensor::RAIILock l(used);
+            playNolock(channel_id, std::move(v));
+        }
+        
         void setVolume( uint8_t channel_id, channelVolumes );
         bool closeChannel(uint8_t channel_id);
         
@@ -94,11 +114,25 @@ namespace imajuscule {
         }
         
     private:
+        void playNolock( uint8_t channel_id, StackVector<Request> && v) {
+            auto & c = editChannel(channel_id);
+            for( auto & sound : v ) {
+                c.addRequest( std::move(sound) );
+            }
+        }
+
         void computeNextAudioElementsBuffers() {
             A(consummed_frames == 0); // else we skip some unconsummed frames
             clock_ = !clock_;
-            for(auto const & f : audioElements_computes) {
-                f(clock_);
+            for(auto it = audioElements_computes.begin(),
+                end = audioElements_computes.end(); it!=end;) {
+                if(!((*it)(clock_))) {
+                    it = audioElements_computes.erase(it);
+                    end = audioElements_computes.end();
+                }
+                else {
+                    ++it;
+                }
             }
             A(consummed_frames == 0);
         }
@@ -140,11 +174,12 @@ namespace imajuscule {
                                            // the next computation of AudioElements will occur
             }
 
-            // apply the effect
+#if WITH_DELAY
             for( auto & delay : delays ) {
-                // deactivated on purpose : reactivate once low pass filtered
-                //delay.step(outputBuffer, nFrames);
+                // todo low pass filter for more realism
+                delay.step(outputBuffer, nFrames);
             }
+#endif
         }
     };
 }

@@ -22,8 +22,10 @@ void DelayLine::step(SAMPLE *outputBuffer, int nFrames) {
 constexpr auto osc_freq = 300.f;
 constexpr auto ramp_duration_seconds = 1.f;
 
-outputData::outputData()
-: delays{{1000, 0.6f},{4000, 0.2f}, {4300, 0.3f}, {5000, 0.1f}},
+outputData::outputData() :
+#if WITH_DELAY
+delays{{1000, 0.6f},{4000, 0.2f}, {4300, 0.3f}, {5000, 0.1f}},
+#endif
 clock_(false),
 consummed_frames(0)
 /*
