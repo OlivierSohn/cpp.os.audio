@@ -105,7 +105,9 @@ namespace imajuscule {
 #endif
         
 #if TARGET_OS_IOS
+    public:
         std::vector<float> outputBuffer;
+    private:
 #endif
         
     public:

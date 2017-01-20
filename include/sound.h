@@ -97,18 +97,25 @@ namespace imajuscule {
         buffer values;
     };
     
+    template<typename T, size_t N>
+    T * editInactiveAudioElement(std::array<T, N> & aes) {
+        auto it = std::find_if(aes.begin(), aes.end(), [](T const & elt){ return elt.isInactive(); });
+        return (it == aes.end()) ? nullptr : &*it;
+    }
+    
     class Sounds {
         std::map< soundId, soundBuffer > sounds;
         std::array<Oscillator<float>, 8> oscillators;
+        std::array<FreqRamp<float>, 4> ramps;
     public:
         soundBuffer & get( soundId );
+        
         Oscillator<float> * getInactiveOscillator() {
-            for(auto & osc : oscillators) {
-                if(osc.isInactive()) {
-                    return &osc;
-                }
-            }
-            return nullptr;
+            return editInactiveAudioElement(oscillators);
+        }
+
+        FreqRamp<float> * getInactiveFreqRamp() {
+            return editInactiveAudioElement(ramps);
         }
     };
     

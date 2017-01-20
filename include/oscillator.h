@@ -154,15 +154,18 @@ namespace imajuscule {
         
         using typename AudioElement<T>::Tr;
         
-        FreqRamp(T from_,
+        FreqRamp() : cur_sample(Tr::zero()), from{}, to{}, duration_in_samples{}
+        {}
+
+        void set(T from_,
                  T to_,
-                 T duration_in_samples,
-                 itp::interpolation i = itp::LINEAR) :
-        from(angle_increment_from_freq(from_)),
-        to(angle_increment_from_freq(to_)),
-        duration_in_samples(duration_in_samples),
-        cur_sample(Tr::zero())
+                 T duration_in_samples_,
+                 itp::interpolation i = itp::LINEAR)
         {
+            from = angle_increment_from_freq(from_);
+            to = angle_increment_from_freq(to_);
+            duration_in_samples = duration_in_samples_;
+            
             // we want to achieve the same effect as PROPORTIONAL_VALUE_DERIVATIVE
             // but without paying the cost of one 'expf' call per audio frame :
             // to achieve the same effect we add to cur_sample a value proportionnal to
@@ -192,7 +195,7 @@ namespace imajuscule {
         Oscillator<T> osc;
         NormalizedInterpolation<T> interp;
         T from, to, cur_sample, C;
-        const T duration_in_samples;
+        T duration_in_samples;
         
         T currentFreq() {
             if(cur_sample > duration_in_samples) {
