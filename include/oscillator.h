@@ -63,9 +63,18 @@ namespace imajuscule {
             constexpr bool isActive() const { return getState() != inactive(); }
         };
         
+        template<typename ALGO, typename T = decltype(ALGO().imag())>
+        struct FinalAudioElement : public AudioElement<T>{
+            using FPT = T;
+            template <class... Args>
+            FinalAudioElement(Args&&... args) : algo(std::forward<Args>(args)...) {}
+            
+            ALGO algo;
+        };
+        
         template<typename T>
-        struct Phased : AudioElement<T> {
-            using typename AudioElement<T>::Tr;
+        struct Phased {
+            using Tr = NumTraits<T>;
             
             Phased() = default;
             Phased(T angle_increments) { setAngleIncrements(angle_increments); }
@@ -74,6 +83,7 @@ namespace imajuscule {
             T angle() const { return angle_; }
             
             void setAngleIncrements(T v) {
+                A(std::abs(v) < Tr::two()); // else need to modulo it
                 angle_increments = v;
             }
             T angleIncrements() const { return angle_increments; }
@@ -97,38 +107,42 @@ namespace imajuscule {
          * Phase controlled oscillator
          */
         template<typename T>
-        struct PCOscillator : public Phased<T> {
-            using typename AudioElement<T>::Tr;
+        struct PCOscillatorAlgo : public Phased<T> {
             using Phased<T>::angle_;
             
-            PCOscillator() = default;
-            PCOscillator(T angle_increments) : Phased<T>(angle_increments) {}
+            PCOscillatorAlgo() = default;
+            PCOscillatorAlgo(T angle_increments) : Phased<T>(angle_increments) {}
             
             T real() const { return std::cos(M_PI*angle_); }
             T imag() const { return std::sin(M_PI*angle_); }
         };
         
         template<typename T>
-        struct Square : public Phased<T> {
-            using typename AudioElement<T>::Tr;
+        using PCOscillator = FinalAudioElement<PCOscillatorAlgo<T>>;
+        
+        template<typename T>
+        struct SquareAlgo : public Phased<T> {
             using Phased<T>::angle_;
             
-            Square() = default;
-            Square(T angle_increments) : Phased<T>(angle_increments) {}
+            SquareAlgo() = default;
+            SquareAlgo(T angle_increments) : Phased<T>(angle_increments) {}
             
             T imag() const { return square(angle_); }
         };
+
+        template<typename T>
+        using Square = FinalAudioElement<SquareAlgo<T>>;
         
         /*
          * first pulse happends at angle = 0
          */
         template<typename T>
-        struct PulseTrain : public Phased<T> {
-            using typename AudioElement<T>::Tr;
+        struct PulseTrainAlgo : public Phased<T> {
+            using Tr = NumTraits<T>;
             using Phased<T>::angle_;
             
-            PulseTrain() = default;
-            PulseTrain(T angle_increments, T pulse_width) :
+            PulseTrainAlgo() = default;
+            PulseTrainAlgo(T angle_increments, T pulse_width) :
             Phased<T>(angle_increments),
             pulse_width(pulse_width) {
                 A(pulse_width >= angle_increments); // else it's always 0
@@ -145,10 +159,13 @@ namespace imajuscule {
             T pulse_width{};
         };
         
-        template<typename AE, typename T = typename AE::FPT>
-        struct LowPass : public AudioElement<T> {
+        template<typename T>
+        using PulseTrain = FinalAudioElement<PulseTrainAlgo<T>>;
+
+        template<typename AEAlgo, typename T = decltype(AEAlgo().imag())>
+        struct LowPassAlgo {
         private:
-            AE audio_element;
+            AEAlgo audio_element;
             Filter<T, 1, FilterType::LOW_PASS> low_pass;
         public:
             void step() {
@@ -165,14 +182,21 @@ namespace imajuscule {
             auto & filter() { return low_pass; }
         };
         
-        enum eNormalizePolicy {FAST_NORMALIZE, ACCURATE_NORMALIZE};
         
-        template<typename T, int NormPolicy = FAST_NORMALIZE>
-        struct Oscillator : AudioElement<T> {
-            using typename AudioElement<T>::Tr;
+        template<typename AEAlgo>
+        using LowPass = FinalAudioElement<LowPassAlgo<AEAlgo>>;
+        
+        enum class eNormalizePolicy {
+            FAST,
+            ACCURATE
+        };
+
+        template<typename T, eNormalizePolicy NormPolicy = eNormalizePolicy::FAST>
+        struct OscillatorAlgo {
+            using Tr = NumTraits<T>;
             
-            constexpr Oscillator(T angle_increments) { setAngleIncrements(angle_increments); }
-            constexpr Oscillator() : mult(Tr::one(), Tr::zero()) {}
+            constexpr OscillatorAlgo(T angle_increments) { setAngleIncrements(angle_increments); }
+            constexpr OscillatorAlgo() : mult(Tr::one(), Tr::zero()) {}
             
             void setAngle(T f) {
                 cur = polar(static_cast<T>(M_PI)*f);
@@ -183,7 +207,7 @@ namespace imajuscule {
             
             void step() {
                 cur *= mult;
-                if(NormPolicy == FAST_NORMALIZE) {
+                if(NormPolicy == eNormalizePolicy::FAST) {
                     approx_normalize(); // to fix iterative error accumulation... if it is costly it could be done less frequently
                 }
                 else {
@@ -212,14 +236,17 @@ namespace imajuscule {
             }
         };
         
+        template<typename T, eNormalizePolicy NormPolicy = eNormalizePolicy::FAST>
+        using Oscillator = FinalAudioElement<OscillatorAlgo<T, NormPolicy>>;
+        
         template<typename T>
-        struct FreqRamp : AudioElement<T> {
+        struct FreqRampAlgo {
             
-            static_assert(std::is_same<T,float>::value, "non float interpolation is not supported");
+            static_assert(std::is_same<T,float>::value, "non-float interpolation is not supported");
             
-            using typename AudioElement<T>::Tr;
+            using Tr = NumTraits<T>;
             
-            FreqRamp() : cur_sample(Tr::zero()), from{}, to{}, duration_in_samples{}
+            FreqRampAlgo() : cur_sample(Tr::zero()), from{}, to{}, duration_in_samples{}
             {}
             
             void set(T from_,
@@ -261,8 +288,8 @@ namespace imajuscule {
             T real() const { return osc.real(); }
             T imag() const { return osc.imag(); }
             
-            private:
-            Oscillator<T> osc;
+        private:
+            OscillatorAlgo<T> osc;
             NormalizedInterpolation<T> interp;
             T from, to, cur_sample, C;
             T duration_in_samples;
@@ -279,13 +306,16 @@ namespace imajuscule {
         };
         
         template<typename T>
-        struct RingModulation : public AudioElement<T> {
-            using typename AudioElement<T>::Tr;
+        using FreqRamp = FinalAudioElement<FreqRampAlgo<T>>;
+        
+        template<typename T>
+        struct RingModulationAlgo {
+            using Tr = NumTraits<T>;
             
-            RingModulation(T angle_increments1, T angle_increments2)
+            RingModulationAlgo(T angle_increments1, T angle_increments2)
             : osc1(angle_increments1), osc2(angle_increments2)
             {}
-            RingModulation() = default;
+            RingModulationAlgo() = default;
             
             void set(T angle_increments1, T angle_increments2, bool reset = true) {
                 osc1.setAngleIncrements(angle_increments1);
@@ -306,52 +336,52 @@ namespace imajuscule {
             T real() const { return osc1.real() * osc2.real(); }
             T imag() const { return osc1.imag() * osc2.imag(); }
             
-            private:
-            Oscillator<T> osc1, osc2;
+        private:
+            OscillatorAlgo<T> osc1, osc2;
         };
+        
+        template<typename T>
+        using RingModulation = FinalAudioElement<RingModulationAlgo<T>>;
         
         /*
          * returns false when the buffer is done being used
          */
-        template<typename T>
-        bool computeAudioElement(T & ae, bool const sync_clock) {
-            using AE = AudioElement<typename T::FPT>;
-            auto & e = static_cast<AE&>(ae);
-            
-            if(e.getState() == AE::inactive()) {
-                // Issue : if the buffer just got marked inactive,
-                // but no new AudioElementCompute happends
-                // and from the main thread someone acquires this and queues it,
-                // it will have 2 lambdas because the first lambda will never have seen the inactive state.
-                // However the issue is not major, as the 2 lambdas have a chance to be removed
-                // the next time
-                return false;
-            }
-            if(e.getState() != AE::queued() && (sync_clock == e.clock_)) {
-                return true;
-            }
-            e.clock_ = sync_clock;
-            for(auto & v : e.buffer) {
-                ae.step();
-                v = ae.imag();
-            }
-            A(e.getState() != AE::queued());
-            A(e.getState() != AE::inactive());
-            return true;
-        }
-        
         using ComputeFunc = std::function<bool(bool)>;
         
         template<typename T>
         struct FCompute {
             template<typename U=T>
-            static auto get(U & e)
+            static auto get(U & ae)
             -> std::enable_if_t<
             IsDerivedFrom<U, AudioElementBase>::Is,
             ComputeFunc
             >
             {
-                return [&e](bool clck) { return computeAudioElement(e, clck); };
+                return [&ae](bool sync_clock) {
+                    using AE = AudioElement<typename T::FPT>;
+                    auto & e = safe_cast<AE&>(ae);
+                    
+                    if(e.getState() == AE::inactive()) {
+                        // Issue : if the buffer just got marked inactive,
+                        // but no new AudioElementCompute happends
+                        // and from the main thread someone acquires this and queues it,
+                        // it will have 2 lambdas because the first lambda will never have seen the inactive state.
+                        // However the issue is not major, as the 2 lambdas have a chance to be removed
+                        // the next time
+                        return false;
+                    }
+                    if(e.getState() != AE::queued() && (sync_clock == e.clock_)) {
+                        return true;
+                    }
+                    e.clock_ = sync_clock;
+                    for(auto & v : e.buffer) {
+                        ae.algo.step();
+                        v = ae.algo.imag();
+                    }
+                    A(e.getState() != AE::queued());
+                    A(e.getState() != AE::inactive());
+                    return true;
+                };
             }
             
             template<typename U=T>
