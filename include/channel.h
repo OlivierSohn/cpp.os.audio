@@ -174,7 +174,7 @@ namespace imajuscule {
                 A(current_next_sample_index < s);
                 
                 A(crossfading_from_zero_remaining() <= 0);
-                A(std::abs(buf[current_next_sample_index]) < 1.1f);
+                A(std::abs(buf[current_next_sample_index]) < 1.1f);
                 auto val = volume * buf[current_next_sample_index];
                 stepVolume();
                 for(auto i=0; i<nAudioOut; ++i) {
@@ -191,7 +191,7 @@ namespace imajuscule {
                 A(current_next_sample_index < AudioElementBase::n_frames_per_buffer);
                 
                 A(crossfading_from_zero_remaining() <= 0);
-                A(std::abs(buf[current_next_sample_index]) < 1.1f);
+                A(std::abs(buf[current_next_sample_index]) < 1.1f);
                 auto val = volume * static_cast<float>(buf[current_next_sample_index]);
                 stepVolume();
                 for(auto i=0; i<nAudioOut; ++i) {
@@ -292,7 +292,7 @@ namespace imajuscule {
                         other_next_sample_index = 0;
                     }
                     A(other_next_sample_index <= other_s);
-                    A(std::abs((other->buffer.asSoundBuffer())[other_next_sample_index] < 1.1f));
+                    A(std::abs((other->buffer.asSoundBuffer())[other_next_sample_index] < 1.1f));
                     val += (1.f - xfade_ratio) * other->volume * (other->buffer.asSoundBuffer())[other_next_sample_index];
                     ++other_next_sample_index;
                 }
