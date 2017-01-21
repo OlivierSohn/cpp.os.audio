@@ -131,12 +131,12 @@ namespace imajuscule {
             PulseTrain(T angle_increments, T pulse_width) :
             Phased<T>(angle_increments),
             pulse_width(pulse_width) {
-                A(pulse_width >= angle_increments); // else it's always 0
+                A(pulse_width >= angle_increments); // else it's always 0
             }
             
             void set(T angle_increments, T pulse_width_) {
-                A(pulse_width_ >= angle_increments); // else it's always 0
-                setAngleIncrements(angle_increments);
+                A(pulse_width_ >= angle_increments); // else it's always 0
+                this->setAngleIncrements(angle_increments);
                 pulse_width = pulse_width_;
             }
             
@@ -145,9 +145,24 @@ namespace imajuscule {
             T pulse_width{};
         };
         
-        template<typename T>
-        struct LowPass : public Phased<T> {
+        template<typename AE, typename T = typename AE::FPT>
+        struct LowPass : public AudioElement<T> {
+        private:
+            AE audio_element;
             Filter<T, 1, FilterType::LOW_PASS> low_pass;
+        public:
+            void step() {
+                audio_element.step();
+                auto val = audio_element.imag();
+                low_pass.feed(&val);
+            }
+            
+            T imag() {
+                return *low_pass.filtered();
+            }
+            
+            auto & get_element() { return audio_element; }
+            auto & filter() { return low_pass; }
         };
         
         enum eNormalizePolicy {FAST_NORMALIZE, ACCURATE_NORMALIZE};
