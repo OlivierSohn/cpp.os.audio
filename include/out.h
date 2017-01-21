@@ -110,6 +110,13 @@ namespace imajuscule {
     private:
 #endif
         
+    private:
+        template<typename F>
+        void registerAudioElementCompute(F f) {
+            // todo prevent reallocation here to not block audio...
+            audioElements_computes.push_back(std::move(f));
+        }
+        
     public:
         outputDataBase()
         :
@@ -209,7 +216,7 @@ namespace imajuscule {
             auto buffers = std::make_tuple(std::ref(requests.first)...);
             for_each(buffers, [this](auto &buf) {
                 if(auto f = fCompute(buf)) {
-                    registerAudioElementCompute(std::move(f));
+                    this->registerAudioElementCompute(std::move(f));
                 }
             });
             
@@ -276,12 +283,6 @@ namespace imajuscule {
         }
         
     private:
-        template<typename F>
-        void registerAudioElementCompute(F f) {
-            // todo prevent reallocation here to not block audio...
-            audioElements_computes.push_back(std::move(f));
-        }
-        
         void playNolock( uint8_t channel_id, StackVector<Request> && v) {
             auto & c = editChannel(channel_id);
             for( auto & sound : v ) {
