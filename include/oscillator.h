@@ -58,6 +58,7 @@ namespace imajuscule {
         
         auto getState() const { return state(buffer); }
         constexpr bool isInactive() const { return getState() == inactive(); }
+        constexpr bool isActive() const { return getState() != inactive(); }
     };
     
     /*
@@ -130,8 +131,9 @@ namespace imajuscule {
         T real() const { return cur.real(); }
         T imag() const { return cur.imag(); }
         
-        T angle() const { return arg(cur); }
-
+        T angle() const { return arg(cur)/M_PI; }
+        T angleIncrements() const { return arg(mult)/M_PI; }
+        
     private:
         complex<T> cur = {Tr::one(), Tr::zero()};
         complex<T> mult;
@@ -160,8 +162,11 @@ namespace imajuscule {
         void set(T from_,
                  T to_,
                  T duration_in_samples_,
+                 T start_sample = Tr::zero(),
                  itp::interpolation i = itp::LINEAR)
         {
+            cur_sample = start_sample;
+            
             from = angle_increment_from_freq(from_);
             to = angle_increment_from_freq(to_);
             duration_in_samples = duration_in_samples_;
@@ -184,9 +189,11 @@ namespace imajuscule {
         void step() {
             auto f = currentFreq();
             osc.setAngleIncrements(f);
-            osc.step(); // we step osc because we own it
+            osc.step(); // we must step osc because we own it
             cur_sample += C * f ;
         }
+        
+        T angleIncrements() const { return osc.angleIncrements(); }
         
         T real() const { return osc.real(); }
         T imag() const { return osc.imag(); }
@@ -202,7 +209,7 @@ namespace imajuscule {
                 cur_sample = Tr::zero();
                 std::swap(from, to);
             }
-            // call get_unfiltered_value instead of get_value because we ensure:
+            // we call get_unfiltered_value instead of get_value because we ensure:
             A(cur_sample <= duration_in_samples);
             return interp.get_unfiltered_value(cur_sample, duration_in_samples, from, to);
         }

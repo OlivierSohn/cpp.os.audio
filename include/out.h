@@ -118,11 +118,6 @@ namespace imajuscule {
 #endif
         clock_(false),
         consummed_frames(0)
-        /*
-         ,ramp(300.f,
-         600.f,
-         ramp_duration_seconds * SAMPLE_RATE,
-         itp::EASE_INOUT_QUINT)*/
         {
             // to avoid reallocations when we hold the lock
             // we allocate all we need for channel management now:

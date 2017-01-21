@@ -88,7 +88,7 @@ namespace imajuscule {
         
         int get_size_xfade() const { return 1 + 2 * size_half_xfade; }
         float get_xfade_increment() const { return 1.f / (get_size_xfade() - 1); };
-        float duration_millis_xfade() const { return 1000.f * static_cast<float>(get_size_xfade()) / SAMPLE_RATE; }
+        float duration_millis_xfade() const { return frames_to_ms(static_cast<float>(get_size_xfade())); }
         
         Channel() : volume_transition_remaining(0), next(false)
         {

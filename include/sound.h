@@ -98,6 +98,10 @@ namespace imajuscule {
     };
     
     template<typename T, size_t N>
+    size_t countActiveAudioElements(std::array<T, N> & aes) {
+        return std::count_if(aes.begin(), aes.end(), [](T const & elt){ return elt.isActive(); });
+    }
+    template<typename T, size_t N>
     T * editInactiveAudioElement(std::array<T, N> & aes) {
         auto it = std::find_if(aes.begin(), aes.end(), [](T const & elt){ return elt.isInactive(); });
         return (it == aes.end()) ? nullptr : &*it;
@@ -116,6 +120,13 @@ namespace imajuscule {
 
         FreqRamp<float> * getInactiveFreqRamp() {
             return editInactiveAudioElement(ramps);
+        }
+        
+        size_t countActiveOscillators() {
+            return countActiveAudioElements(oscillators);
+        }
+        size_t countActiveFreqRamps() {
+            return countActiveAudioElements(ramps);
         }
     };
     

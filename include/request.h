@@ -1,10 +1,6 @@
 
 namespace imajuscule {
 
-    constexpr int ms_to_frames(float duration_ms) {
-        return static_cast<int>( SAMPLE_RATE * 0.001f * duration_ms );
-    }
-    
     template<typename T>
     void onQueued(T * buffer) {
         using AE = AudioElement<T>;
