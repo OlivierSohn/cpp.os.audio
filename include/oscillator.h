@@ -147,8 +147,9 @@ namespace imajuscule {
         
         template<typename T>
         struct LowPass : public Phased<T> {
-            
+            Filter<T, 1, FilterType::LOW_PASS> low_pass;
         };
+        
         enum eNormalizePolicy {FAST_NORMALIZE, ACCURATE_NORMALIZE};
         
         template<typename T, int NormPolicy = FAST_NORMALIZE>
