@@ -1,22 +1,22 @@
 
 namespace imajuscule {
-
-    template<typename T>
-    void onQueued(T * buffer) {
-        using AE = AudioElement<T>;
-        A(state(buffer) == AE::inactive()); // to be sure at most one channel uses it
-        state(buffer) = AE::queued();
+    namespace audioelement {
+        template<typename T>
+        void onQueued(T * buffer) {
+            using AE = AudioElement<T>;
+            A(state(buffer) == AE::inactive()); // to be sure at most one channel uses it
+            state(buffer) = AE::queued();
+        }
+        
+        template<typename T>
+        void onUnqueued(T * buffer) {
+            using AE = AudioElement<T>;
+            A(state(buffer) != AE::inactive()); // to be sure at most one channel uses it
+            // note that if state is AE::queued(), it means no computation occured on this buffer
+            // (indicating the channel has been interrupted)
+            state(buffer) = AE::inactive();
+        }
     }
-    
-    template<typename T>
-    void onUnqueued(T * buffer) {
-        using AE = AudioElement<T>;
-        A(state(buffer) != AE::inactive()); // to be sure at most one channel uses it
-        // note that if state is AE::queued(), it means no computation occured on this buffer
-        // (indicating the channel has been interrupted)
-        state(buffer) = AE::inactive();
-    }
-    
     
     using AE32Buffer = float *;
     using AE64Buffer = double *;
@@ -153,10 +153,10 @@ namespace imajuscule {
                 return;
             }
             if(is32()) {
-                ::onQueued(asAudioElement32());
+                audioelement::onQueued(asAudioElement32());
             }
             else {
-                ::onQueued(asAudioElement64());
+                audioelement::onQueued(asAudioElement64());
             }
         }
         
@@ -166,10 +166,10 @@ namespace imajuscule {
                 return;
             }
             if(is32()) {
-                ::onUnqueued(asAudioElement32());
+                audioelement::onUnqueued(asAudioElement32());
             }
             else {
-                ::onUnqueued(asAudioElement64());
+                audioelement::onUnqueued(asAudioElement64());
             }
         }
     };

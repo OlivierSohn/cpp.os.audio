@@ -3,8 +3,8 @@ using namespace imajuscule;
 
 void Channel::step(SAMPLE * outputBuffer, int n_max_writes, unsigned int audio_element_consummed_frames)
 {
-    A(n_max_writes <= AudioElementBase::n_frames_per_buffer);
-    A(audio_element_consummed_frames < AudioElementBase::n_frames_per_buffer);
+    A(n_max_writes <= audioelement::n_frames_per_buffer);
+    A(audio_element_consummed_frames < audioelement::n_frames_per_buffer);
 
     initial_audio_element_consummed = audio_element_consummed_frames;
     total_n_writes = n_max_writes;

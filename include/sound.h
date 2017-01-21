@@ -1,6 +1,6 @@
 
 namespace imajuscule {
-    
+
     struct Sound {
         enum Type : unsigned char {
             SINE,
@@ -109,24 +109,40 @@ namespace imajuscule {
     
     class Sounds {
         std::map< soundId, soundBuffer > sounds;
-        std::array<Oscillator<float>, 8> oscillators;
-        std::array<FreqRamp<float>, 4> ramps;
+        std::array<audioelement::Square<float>, 8> squares;
+        std::array<audioelement::Oscillator<float>, 8> oscillators;
+        std::array<audioelement::FreqRamp<float>, 6> ramps;
+        std::array<audioelement::RingModulation<float>, 6> ringmods;
     public:
         soundBuffer & get( soundId );
         
-        Oscillator<float> * getInactiveOscillator() {
+        audioelement::Oscillator<float> * getInactiveOscillator() {
             return editInactiveAudioElement(oscillators);
         }
-
-        FreqRamp<float> * getInactiveFreqRamp() {
+        
+        audioelement::Square<float> * getInactiveSquare() {
+            return editInactiveAudioElement(squares);
+        }
+        
+        audioelement::FreqRamp<float> * getInactiveFreqRamp() {
             return editInactiveAudioElement(ramps);
+        }
+        
+        audioelement::RingModulation<float> * getInactiveRingMod() {
+            return editInactiveAudioElement(ringmods);
         }
         
         size_t countActiveOscillators() {
             return countActiveAudioElements(oscillators);
         }
+        size_t countActiveSquares() {
+            return countActiveAudioElements(squares);
+        }
         size_t countActiveFreqRamps() {
             return countActiveAudioElements(ramps);
+        }
+        size_t countActiveRingMods() {
+            return countActiveAudioElements(ringmods);
         }
     };
     

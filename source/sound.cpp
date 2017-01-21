@@ -1,7 +1,7 @@
 
 using namespace imajuscule;
 
-static float triangle( float angle_radians ) {
+static float triangle_( float angle_radians ) {
     A(angle_radians >= 0.f);
     A(angle_radians <= 2.f * (float)M_PI);
     
@@ -17,7 +17,7 @@ static float triangle( float angle_radians ) {
         return -4.f + 2.f * angle_radians;
     }
 }
-static float saw( float angle_radians ) {
+static float saw_( float angle_radians ) {
     A(angle_radians >= 0.f);
     A(angle_radians <= 2.f * (float)M_PI);
     
@@ -32,19 +32,15 @@ static float saw( float angle_radians ) {
     }
 }
 
-static float square( float angle_radians ) {
+static float square_( float angle_radians ) {
     A(angle_radians >= 0.f);
     A(angle_radians <= 2.f * (float)M_PI);
     
     static const float inv_pi = 1.f / (float)M_PI;
     
     angle_radians *= inv_pi;
-    
-    if( angle_radians <= 0.5f || angle_radians >= 1.5f ) {
-        return 1.f;
-    } else {
-        return -1.f;
-    }
+
+    return square(angle_radians);
 }
 
 static float my_rand(float) {
@@ -113,15 +109,15 @@ soundBuffer::soundBuffer( soundId const & id ) {
             break;
             
         case Sound::TRIANGLE:
-            generate( id.period_length, triangle );
+            generate( id.period_length, triangle_ );
             break;
             
         case Sound::SAW:
-            generate( id.period_length, saw );
+            generate( id.period_length, saw_ );
             break;
             
         case Sound::SQUARE:
-            generate( id.period_length, square );
+            generate( id.period_length, square_ );
             break;
             
         case Sound::SILENCE:

@@ -17,6 +17,7 @@
 #include "../../cg.math/include/public.h"
 
 #include "sound.defines.h"
+#include "sound.functions.h"
 #include "oscillator.h"
 #include "stereo.h"
 #include "sound.h"

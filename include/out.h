@@ -85,7 +85,7 @@ namespace imajuscule {
         
         /// the number of buffer frames that were used from the previous AudioElements buffer write
         /// "0" means the entire buffers where used
-        unsigned int consummed_frames : relevantBits( AudioElementBase::n_frames_per_buffer - 1 );
+        unsigned int consummed_frames : relevantBits( audioelement::n_frames_per_buffer - 1 );
         ///
         //////////////////////////
         
@@ -97,7 +97,7 @@ namespace imajuscule {
         // computing the ones that are active.
         using postProcessFunc = std::function<void(float*)>;
 
-        std::vector<AudioElementComputeFunc> audioElements_computes;
+        std::vector<audioelement::ComputeFunc> audioElements_computes;
         std::vector<postProcessFunc> post_process;
         
 #if WITH_DELAY
@@ -215,7 +215,7 @@ namespace imajuscule {
             
             auto buffers = std::make_tuple(std::ref(requests.first)...);
             for_each(buffers, [this](auto &buf) {
-                if(auto f = fCompute(buf)) {
+                if(auto f = audioelement::fCompute(buf)) {
                     this->registerAudioElementCompute(std::move(f));
                 }
             });
@@ -308,15 +308,15 @@ namespace imajuscule {
         
         // returns true if everything was consummed AND there is more frames remaining
         bool consume_buffers(SAMPLE *& buf, int & nFrames) {
-            A(consummed_frames < AudioElementBase::n_frames_per_buffer);
-            auto remaining_frames = AudioElementBase::n_frames_per_buffer - consummed_frames;
-            A(remaining_frames <= AudioElementBase::n_frames_per_buffer);
+            A(consummed_frames < audioelement::n_frames_per_buffer);
+            auto remaining_frames = audioelement::n_frames_per_buffer - consummed_frames;
+            A(remaining_frames <= audioelement::n_frames_per_buffer);
             A(remaining_frames > 0);
             if(remaining_frames > nFrames) {
                 // partial consume
                 do_consume_buffers(buf, nFrames);
                 consummed_frames += nFrames;
-                A(consummed_frames < AudioElementBase::n_frames_per_buffer);
+                A(consummed_frames < audioelement::n_frames_per_buffer);
                 return false;
             }
             // total consume
@@ -331,8 +331,8 @@ namespace imajuscule {
         }
         
         void do_consume_buffers(SAMPLE * outputBuffer, int nFrames) {
-            A(nFrames <= AudioElementBase::n_frames_per_buffer); // by design
-            A(consummed_frames < AudioElementBase::n_frames_per_buffer); // by design
+            A(nFrames <= audioelement::n_frames_per_buffer); // by design
+            A(consummed_frames < audioelement::n_frames_per_buffer); // by design
             
             memset(outputBuffer, 0, nFrames * nAudioOut * sizeof(SAMPLE));
             

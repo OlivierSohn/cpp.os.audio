@@ -56,8 +56,8 @@ namespace imajuscule {
         // else the current crossfade is from or to 'empty'
         bool next : 1;
         
-        unsigned int total_n_writes : relevantBits(AudioElementBase::n_frames_per_buffer);
-        unsigned int initial_audio_element_consummed : relevantBits(AudioElementBase::n_frames_per_buffer - 1);
+        unsigned int total_n_writes : relevantBits(audioelement::n_frames_per_buffer);
+        unsigned int initial_audio_element_consummed : relevantBits(audioelement::n_frames_per_buffer - 1);
         
         QueuedRequest current;
         QueuedRequest previous;
@@ -188,7 +188,7 @@ namespace imajuscule {
         template<typename T>
         void write_single_AudioElement(SAMPLE * outputBuffer, int n_writes, T const & buf, float volume) {
             for( int i=0; i<n_writes; ++i) {
-                A(current_next_sample_index < AudioElementBase::n_frames_per_buffer);
+                A(current_next_sample_index < audioelement::n_frames_per_buffer);
                 
                 A(crossfading_from_zero_remaining() <= 0);
                 A(std::abs(buf[current_next_sample_index]) < 1.1f);
@@ -201,7 +201,7 @@ namespace imajuscule {
                 ++current_next_sample_index;
             }
 
-            if(current_next_sample_index == AudioElementBase::n_frames_per_buffer) {
+            if(current_next_sample_index == audioelement::n_frames_per_buffer) {
                 current_next_sample_index = 0;
             }
         }
@@ -323,7 +323,7 @@ namespace imajuscule {
             int const s = current.buffer ? (int) current.buffer.asSoundBuffer().size() : 0;
             for( int i=0; i<n_writes; i++ ) {
                 A(other_next_sample_index >= 0);
-                A(other_next_sample_index < AudioElementBase::n_frames_per_buffer);
+                A(other_next_sample_index < audioelement::n_frames_per_buffer);
                 A(std::abs(buf2[other_next_sample_index]) < 1.1f);
                 auto val = (1.f - xfade_ratio) * volBuf2 * static_cast<float>(buf2[other_next_sample_index]);
                 ++other_next_sample_index;
@@ -342,7 +342,7 @@ namespace imajuscule {
                 write_value(val, outputBuffer);
             }
             
-            if(other_next_sample_index == AudioElementBase::n_frames_per_buffer) {
+            if(other_next_sample_index == audioelement::n_frames_per_buffer) {
                 other_next_sample_index = 0;
             }
         }
@@ -372,7 +372,7 @@ namespace imajuscule {
             int const other_s = (other && other->buffer) ? safe_cast<int>(other->buffer.asSoundBuffer().size()) : 0;
             for( int i=0; i<n_writes; ++i, ++current_next_sample_index) {
                 A(current_next_sample_index >= 0);
-                A(current_next_sample_index < AudioElementBase::n_frames_per_buffer);
+                A(current_next_sample_index < audioelement::n_frames_per_buffer);
                 A(std::abs(buf1[current_next_sample_index]) < 1.1f);
                 auto val = xfade_ratio * volBuf1 * buf1[current_next_sample_index];
                 
@@ -391,7 +391,7 @@ namespace imajuscule {
                 write_value(val, outputBuffer);
             }
             
-            if(current_next_sample_index == AudioElementBase::n_frames_per_buffer) {
+            if(current_next_sample_index == audioelement::n_frames_per_buffer) {
                 current_next_sample_index = 0;
             }
         }
@@ -441,9 +441,9 @@ namespace imajuscule {
                                                          T2 const & buf2, float const volBuf2) {
             for( int i=0; i<n_writes; ++i, ++current_next_sample_index, ++other_next_sample_index, xfade_ratio -= xfade_increment) {
                 A(current_next_sample_index >= 0);
-                A(current_next_sample_index < AudioElementBase::n_frames_per_buffer);
+                A(current_next_sample_index < audioelement::n_frames_per_buffer);
                 A(other_next_sample_index >= 0);
-                A(other_next_sample_index < AudioElementBase::n_frames_per_buffer);
+                A(other_next_sample_index < audioelement::n_frames_per_buffer);
                 
                 A(std::abs(buf1[current_next_sample_index]) < 1.1f);
                 A(std::abs(buf2[other_next_sample_index]) < 1.1f);
@@ -455,10 +455,10 @@ namespace imajuscule {
                             outputBuffer);
             }
             
-            if(current_next_sample_index == AudioElementBase::n_frames_per_buffer) {
+            if(current_next_sample_index == audioelement::n_frames_per_buffer) {
                 current_next_sample_index = 0;
             }
-            if(other_next_sample_index == AudioElementBase::n_frames_per_buffer) {
+            if(other_next_sample_index == audioelement::n_frames_per_buffer) {
                 other_next_sample_index = 0;
             }
         }
@@ -511,7 +511,7 @@ namespace imajuscule {
                     other_next_sample_index = initial_audio_element_consummed; // keep separate to make the type consversion
                     A(n_writes_remaining <= total_n_writes); // make sure it's safe to do the following substraction, total_n_writes being unsigned
                     other_next_sample_index += total_n_writes - n_writes_remaining;
-                    A(other_next_sample_index < AudioElementBase::n_frames_per_buffer);
+                    A(other_next_sample_index < audioelement::n_frames_per_buffer);
                 }
                 A(other_next_sample_index >= 0);
             }

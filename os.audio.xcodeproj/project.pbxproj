@@ -27,6 +27,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		0907BFB11E33BB3A003E19A1 /* sound.functions.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = sound.functions.h; path = include/sound.functions.h; sourceTree = "<group>"; };
 		097835661D57B0EA00E47ED3 /* unity.build.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = unity.build.cpp; path = source/unity.build.cpp; sourceTree = "<group>"; };
 		09C645AB1E0A9E4200153C61 /* parse.music.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = parse.music.cpp; path = source/parse.music.cpp; sourceTree = "<group>"; };
 		09C645AC1E0ADC9800153C61 /* sound.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = sound.h; path = include/sound.h; sourceTree = "<group>"; };
@@ -130,6 +131,7 @@
 		09E7B1351BB5CA30007BAA5F /* include */ = {
 			isa = PBXGroup;
 			children = (
+				0907BFB11E33BB3A003E19A1 /* sound.functions.h */,
 				09C682D21E28945600C2716D /* channel.h */,
 				09C645B51E0ECBBF00153C61 /* note.h */,
 				09E7B1331BB5CA29007BAA5F /* os.audio.h */,
