@@ -210,8 +210,8 @@ namespace imajuscule {
             data.setVolume( channel_id, volumes);
         }
 
-        void closeChannel(uint8_t channel_id) {
-            data.closeChannel( channel_id );
+        void closeChannel(uint8_t channel_id, CloseMode mode) {
+            data.closeChannel( channel_id, mode );
             if( data.empty() ) {
                 TearDown();
             }

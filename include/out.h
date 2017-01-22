@@ -69,6 +69,11 @@ namespace imajuscule {
     // reserved number to indicate "no channel"
     static constexpr auto AUDIO_CHANNEL_NONE = std::numeric_limits<uint8_t>::max();
     
+    enum class CloseMode {
+        FORCE, // channel is closed now even if it is playing something
+        SOFT   // channel will be converted to autoclosing
+    };
+    
     enum class PostProcess {
         COMPRESS,
         NONE
@@ -273,11 +278,22 @@ namespace imajuscule {
             return id;
         }
         
-        void closeChannel(uint8_t channel_id)
+        void closeChannel(uint8_t channel_id, CloseMode mode)
         {
+#ifndef NDEBUG
+            auto it = std::find(autoclosing_ids.begin(), autoclosing_ids.end(), channel_id);
+            A(it == autoclosing_ids.end()); // make sure channel is NOT autoclosing
+#endif
             {
                 Sensor::RAIILock l(used);
-                editChannel(channel_id).stopPlaying();
+                auto & c = editChannel(channel_id);
+                if(mode == CloseMode::SOFT && c.isPlaying()) {
+                    autoclosing_ids.push_back(channel_id);
+                    A(autoclosing_ids.size() <= std::numeric_limits<uint8_t>::max());
+                    // else logic error : some users closed manually some autoclosing channels
+                    return;
+                }
+                c.stopPlaying();
             }
             available_ids.Return(channel_id);
         }
