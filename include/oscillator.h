@@ -48,7 +48,8 @@ namespace imajuscule {
             ////// [AudioElement<float>] beginning of the 2nd cache line
             ////// [AudioElement<double>] beginning of the 3rd cache line
             
-            bool clock_ : 1;
+            bool clock_ : 1; // could be removed since we don't have any AudioElement
+            // depend on another
             
             using FPT = T;
             using Tr = NumTraits<T>;
@@ -174,7 +175,7 @@ namespace imajuscule {
                 low_pass.feed(&val);
             }
             
-            T imag() {
+            T imag() const {
                 return *low_pass.filtered();
             }
             
@@ -308,13 +309,11 @@ namespace imajuscule {
         template<typename T>
         using FreqRamp = FinalAudioElement<FreqRampAlgo<T>>;
         
-        template<typename T>
+        template<typename A1, typename A2>
         struct RingModulationAlgo {
+            using T = decltype(A1().imag());
             using Tr = NumTraits<T>;
             
-            RingModulationAlgo(T angle_increments1, T angle_increments2)
-            : osc1(angle_increments1), osc2(angle_increments2)
-            {}
             RingModulationAlgo() = default;
             
             void set(T angle_increments1, T angle_increments2, bool reset = true) {
@@ -336,12 +335,15 @@ namespace imajuscule {
             T real() const { return osc1.real() * osc2.real(); }
             T imag() const { return osc1.imag() * osc2.imag(); }
             
+            auto & get_element_1() { return osc1; }
+            auto & get_element_2() { return osc2; }
         private:
-            OscillatorAlgo<T> osc1, osc2;
+            A1 osc1;
+            A2 osc2;
         };
         
-        template<typename T>
-        using RingModulation = FinalAudioElement<RingModulationAlgo<T>>;
+        template<typename A1, typename A2>
+        using RingModulation = FinalAudioElement<RingModulationAlgo<A1,A2>>;
         
         /*
          * returns false when the buffer is done being used
