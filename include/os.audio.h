@@ -173,14 +173,8 @@ namespace imajuscule {
     }
     
     class AudioOut : public NonCopyable {
-        AudioOut() : bInitialized(false) {}
-        ~AudioOut() {
-            data.closeAllChannels(); // needs to be called before Sounds destructor
-        }
         
-        friend class Audio;
-        void Init();
-        void TearDown();
+        // members
         
         PaStream *stream = nullptr;
         bool bInitialized : 1;
@@ -188,7 +182,23 @@ namespace imajuscule {
         
     private:
         Sounds sounds;
+        
+        // methods
+    private:
+        friend class Audio;
+
+        AudioOut() : bInitialized(false) {}
+        ~AudioOut() {
+            data.closeAllChannels(); // needs to be called before Sounds destructor
+        }
+        
+        void Init();
+        void TearDown();
+        
     public:
+        using channelVolumes = decltype(data)::channelVolumes;
+        static constexpr auto nAudioOut = decltype(data)::nOuts;
+
         bool Initialized() const { return bInitialized; }
         uint8_t openChannel(channelVolumes volumes = {{1.f,1.f}},
                             ChannelClosingPolicy channel_lifecycle = ExplicitClose,
