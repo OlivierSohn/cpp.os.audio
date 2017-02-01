@@ -49,29 +49,11 @@ OSStatus renderCallback_in(void                        *userData,
     
     SInt16 *inputFrames = (SInt16*)(buffers->mBuffers->mData);
     
-    // If your DSP code can use integers, then don't bother converting to
-    // floats here, as it just wastes CPU. However, most DSP algorithms rely
-    // on floating point, and this is especially true if you are porting a
-    // VST/AU to iOS.
     for(auto i = 0; i < numFrames; i++) {
         buf[i] = (float)inputFrames[i] / 32768.f;
     }
     
     data->step((const SAMPLE*)buf, numFrames);
-
-    // Now we have floating point sample data from the render callback! We
-    // can send it along for further processing, for example:
-    // plugin->processReplacing(convertedSampleBuffer, nullptr, sampleFrames);
-    
-    
-    /*
-    // Assuming that you have processed in place, we can now write the
-    // floating point data back to the input buffer.
-    for(int i = 0; i < numFrames; i++) {
-        // Note that we multiply by 32767 here, NOT 32768. This is to avoid
-        // overflow errors (and thus clipping).
-        inputFrames[i] = (SInt16)(convertedSampleBuffer[i] * 32767.f);
-    }*/
 
     // mute audio
     for (UInt32 i=0; i<buffers->mNumberBuffers; ++i) {
@@ -100,7 +82,7 @@ OSStatus renderCallback_out(void                        *userData,
     }
     
     outputData *data = (outputData*)userData;
-    auto sizeBuffer = numFrames*nAudioOut;
+    auto sizeBuffer = numFrames*AudioOut::nAudioOut;
     data->outputBuffer.resize(sizeBuffer);
     
     data->step(data->outputBuffer.data(), numFrames);
@@ -108,7 +90,7 @@ OSStatus renderCallback_out(void                        *userData,
     
     for (UInt32 i=0; i<buffers->mNumberBuffers; ++i) {
         A(sizeBuffer * sizeof(SInt16) == buffers->mBuffers[i].mDataByteSize);
-        A(nAudioOut == buffers->mBuffers[i].mNumberChannels);
+        A(AudioOut::nAudioOut == buffers->mBuffers[i].mNumberChannels);
         auto buffer = (SInt16*)(buffers->mBuffers[i].mData);
         for( UInt32 j=0; j<sizeBuffer; j++ ) {
             auto val = (SInt16)(data->outputBuffer[j] * 32767.f);
