@@ -179,10 +179,8 @@ namespace imajuscule {
         PaStream *stream = nullptr;
         bool bInitialized : 1;
         outputData data;
-        
-    private:
         Sounds sounds;
-        
+
         // methods
     private:
         friend class Audio;
@@ -194,10 +192,12 @@ namespace imajuscule {
         
         void Init();
         void TearDown();
-        
+
     public:
         using channelVolumes = decltype(data)::channelVolumes;
         static constexpr auto nAudioOut = decltype(data)::nOuts;
+
+        auto & getChannelHandler() { return data; }
 
         bool Initialized() const { return bInitialized; }
         uint8_t openChannel(channelVolumes volumes = {{1.f,1.f}},
