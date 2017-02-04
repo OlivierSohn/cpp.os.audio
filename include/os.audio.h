@@ -174,10 +174,13 @@ namespace imajuscule {
     
     class AudioOut : public NonCopyable {
         
+        static constexpr auto xfade_on_close = 200;
+        
         // members
         
         PaStream *stream = nullptr;
         bool bInitialized : 1;
+        bool closing : 1;
         outputData data;
         Sounds sounds;
 
@@ -185,46 +188,67 @@ namespace imajuscule {
     private:
         friend class Audio;
 
-        AudioOut() : bInitialized(false) {}
+        AudioOut() : bInitialized(false), closing(false) {}
         ~AudioOut() {
-            data.closeAllChannels(); // needs to be called before Sounds destructor
+            data.closeAllChannels(0); // needs to be called before Sounds destructor
         }
         
         void Init();
         void TearDown();
 
     public:
-        using channelVolumes = decltype(data)::channelVolumes;
+        using Volumes = decltype(data)::Volumes;
         static constexpr auto nAudioOut = decltype(data)::nOuts;
+        using Request = decltype(data)::Request;
 
         auto & getChannelHandler() { return data; }
-
+        void onApplicationShouldClose() {
+            if(closing) {
+                return;
+            }
+            closing = true;
+            data.closeAllChannels(xfade_on_close);
+            LG(INFO, "Fading out Audio before shutdown...");
+        }
+        
         bool Initialized() const { return bInitialized; }
-        uint8_t openChannel(channelVolumes volumes = {{1.f,1.f}},
+        uint8_t openChannel(float volume = 1.f,
                             ChannelClosingPolicy channel_lifecycle = ExplicitClose,
                             int xfade_length = 401) {
+            if(closing) {
+                return AUDIO_CHANNEL_NONE;
+            }
             Init();
-            return data.openChannel(volumes, channel_lifecycle, xfade_length);
+            return data.openChannel(volume, channel_lifecycle, xfade_length);
         }
 
         void play( uint8_t channel_id, StackVector<Request> && v ) {
+            if(closing) {
+                return;
+            }
             data.play( channel_id, std::move( v ) );
         }
         
         template<class ...Args>
         void playGeneric( uint8_t channel_id, Args&& ...args ) {
+            if(closing) {
+                return;
+            }
             data.playGeneric( channel_id, std::forward<Args>( args )... );
         }
         
-        void setVolume( uint8_t channel_id, channelVolumes volumes ) {
-            data.setVolume( channel_id, volumes);
+        void setVolume( uint8_t channel_id, float volume ) {
+            if(closing) {
+                return;
+            }
+            data.setVolume( channel_id, volume);
         }
 
         void closeChannel(uint8_t channel_id, CloseMode mode) {
-            data.closeChannel( channel_id, mode );
-            if( data.empty() ) {
-                TearDown();
+            if(closing) {
+                return;
             }
+            data.closeChannel( channel_id, mode );
         }
         
         int get_xfade_millis(uint8_t channel_id) const {
@@ -237,6 +261,9 @@ namespace imajuscule {
     class Audio {
         friend class Globals;
     public:
+        static constexpr auto nAudioOut = AudioOut::nAudioOut;
+        using Request = typename AudioOut::Request;
+
         static void Init();
         static void TearDown();
         static Audio * getInstance();
