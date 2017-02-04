@@ -213,13 +213,13 @@ namespace imajuscule {
         
         bool Initialized() const { return bInitialized; }
         uint8_t openChannel(float volume = 1.f,
-                            ChannelClosingPolicy channel_lifecycle = ExplicitClose,
+                            ChannelClosingPolicy p = ChannelClosingPolicy::ExplicitClose,
                             int xfade_length = 401) {
             if(closing) {
                 return AUDIO_CHANNEL_NONE;
             }
             Init();
-            return data.openChannel(volume, channel_lifecycle, xfade_length);
+            return data.openChannel(volume, p, xfade_length);
         }
 
         void play( uint8_t channel_id, StackVector<Request> && v ) {
