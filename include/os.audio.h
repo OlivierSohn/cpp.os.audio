@@ -190,7 +190,7 @@ namespace imajuscule {
 
         AudioOut() : bInitialized(false), closing(false) {}
         ~AudioOut() {
-            data.closeAllChannels(0); // needs to be called before Sounds destructor
+            data.closeAllChannels(0); // needs to be called before 'Sounds' destructor
         }
         
         void Init();

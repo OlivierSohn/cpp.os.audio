@@ -21,6 +21,21 @@ int setenv(const char *name, const char *value, int overwrite)
  ** that could mess up the system like calling malloc() or free().
  */
 #if TARGET_OS_IOS
+
+struct iOSOutputData {
+    // we cannot know for sure how much the os will ask us to compute.
+    // on my iPhone 4s I observed 512 was asked.
+    static constexpr auto initial_buffer_size = 1024;
+    
+    iOSOutputData() {
+        // preallocate to avoid dynamic allocation in audio thread
+        buf.reserve(initial_buffer_size);
+    }
+    
+    outputData * data = nullptr;
+    std::vector<outputData::T> buf;
+};
+
 AudioUnit audioUnit_in = nullptr;
 AudioUnit audioUnit_out = nullptr;
 OSStatus renderCallback_in(void                        *userData,
@@ -81,19 +96,19 @@ OSStatus renderCallback_out(void                        *userData,
         return status;
     }
     
-    outputData *data = (outputData*)userData;
-    auto sizeBuffer = numFrames*AudioOut::nAudioOut;
-    data->outputBuffer.resize(sizeBuffer);
+    auto ios_data = reinterpret_cast<iOSOutputData*>(userData);
+    auto sizeBuffer = numFrames * AudioOut::nAudioOut;
+    auto & outputBuffer = ios_data->buf;
+    outputBuffer.resize(sizeBuffer); // hopefully we already reserved enough
     
-    data->step(data->outputBuffer.data(), numFrames);
-    // data->outputBuffer is interleaved
+    ios_data->data->step(outputBuffer.data(), numFrames);
     
     for (UInt32 i=0; i<buffers->mNumberBuffers; ++i) {
         A(sizeBuffer * sizeof(SInt16) == buffers->mBuffers[i].mDataByteSize);
         A(AudioOut::nAudioOut == buffers->mBuffers[i].mNumberChannels);
         auto buffer = (SInt16*)(buffers->mBuffers[i].mData);
         for( UInt32 j=0; j<sizeBuffer; j++ ) {
-            auto val = (SInt16)(data->outputBuffer[j] * 32767.f);
+            auto val = (SInt16)(outputBuffer[j] * 32767.f);
             *buffer = val;
             ++buffer;
         }
@@ -217,7 +232,7 @@ int initAudioSession() {
     return 0;
 }
 
-int initAudioStreams(AudioUnit & audioUnit, void * pData, AURenderCallback cb, int nOuts) {
+int initAudioStreams(AudioUnit & audioUnit, void * data, AURenderCallback cb, int nOuts) {
     UInt32 audioCategory = //kAudioSessionCategory_RecordAudio;
     kAudioSessionCategory_PlayAndRecord;
     if(AudioSessionSetProperty(kAudioSessionProperty_AudioCategory,
@@ -250,7 +265,7 @@ int initAudioStreams(AudioUnit & audioUnit, void * pData, AURenderCallback cb, i
     
     AURenderCallbackStruct callbackStruct;
     callbackStruct.inputProc = cb;
-    callbackStruct.inputProcRefCon = pData;
+    callbackStruct.inputProcRefCon = data;
     if(AudioUnitSetProperty(audioUnit, kAudioUnitProperty_SetRenderCallback,
                             kAudioUnitScope_Input, 0, &callbackStruct,
                             sizeof(AURenderCallbackStruct)) != noErr) {
@@ -271,24 +286,17 @@ int initAudioStreams(AudioUnit & audioUnit, void * pData, AURenderCallback cb, i
     kAudioFormatFlagIsPacked;
     // Not sure if the iPhone supports recording >16-bit audio, but I doubt it.
     streamDescription.mBitsPerChannel = 16;
-    // 1 sample per frame, will always be 2 as long as 16-bit samples are being used
     streamDescription.mBytesPerFrame = nOuts*sizeof(SInt16);
-    // Record in mono. Use 2 for stereo, though I don't think the iPhone does true stereo recording
     streamDescription.mChannelsPerFrame = nOuts;
-    // Always should be set to 1
     streamDescription.mFramesPerPacket = 1;
-    streamDescription.mBytesPerPacket = streamDescription.mBytesPerFrame *
-    streamDescription.mFramesPerPacket;
-    // Always set to 0, just to be sure
+    streamDescription.mBytesPerPacket = streamDescription.mBytesPerFrame * streamDescription.mFramesPerPacket;
     streamDescription.mReserved = 0;
     
-    // Set up input stream with above properties
     if(AudioUnitSetProperty(audioUnit, kAudioUnitProperty_StreamFormat,
                             kAudioUnitScope_Input, 0, &streamDescription, sizeof(streamDescription)) != noErr) {
         return 1;
     }
     
-    // Ditto for the output stream, which we will be sending the processed audio to
     if(AudioUnitSetProperty(audioUnit, kAudioUnitProperty_StreamFormat,
                             kAudioUnitScope_Output, 1, &streamDescription, sizeof(streamDescription)) != noErr) {
         return 1;
@@ -296,6 +304,19 @@ int initAudioStreams(AudioUnit & audioUnit, void * pData, AURenderCallback cb, i
     
     return 0;
 }
+
+int initAudioStreams(AudioUnit & audioUnit, imajuscule::Sensor::paTestData & data, AURenderCallback cb, int nOuts) {
+    return initAudioStreams(audioUnit, &data, cb, nOuts);
+}
+
+int initAudioStreams(AudioUnit & audioUnit, outputData & data, AURenderCallback cb, int nOuts) {
+    
+    static iOSOutputData ios_odata;
+    A(!ios_odata.data || (ios_odata.data==&data));
+    ios_odata.data = &data;
+    return initAudioStreams(audioUnit, &ios_odata, cb, nOuts);
+}
+
 
 OSStatus startAudioUnit(AudioUnit audioUnit) {
     OSStatus res = AudioUnitInitialize(audioUnit);
@@ -380,7 +401,7 @@ bool AudioIn::do_wakeup() {
 #if TARGET_OS_IOS
     if(0==initAudioSession())
     {
-        if(0==initAudioStreams(audioUnit_in, &data, renderCallback_in, 1))
+        if(0==initAudioStreams(audioUnit_in, data, renderCallback_in, 1))
         {
             OSStatus res;
             res = startAudioUnit(audioUnit_in);
@@ -495,7 +516,7 @@ void AudioOut::Init() {
     bInitialized = true;
     if(0==initAudioSession())
     {
-        if(0==initAudioStreams(audioUnit_out, &data, renderCallback_out, nAudioOut))
+        if(0==initAudioStreams(audioUnit_out, data, renderCallback_out, nAudioOut))
         {
             OSStatus res = startAudioUnit(audioUnit_out);
             if( noErr != res )
