@@ -175,13 +175,17 @@ namespace imajuscule {
     class AudioOut : public NonCopyable {
         
         static constexpr auto xfade_on_close = 200;
+        static constexpr auto n_max_orchestrators_per_channel = 1;
         
         // members
         
         PaStream *stream = nullptr;
         bool bInitialized : 1;
         bool closing : 1;
-        outputData data;
+        outputData data{
+            std::numeric_limits<uint8_t>::max(),
+            n_max_orchestrators_per_channel
+        };
         Sounds sounds;
 
         // methods
@@ -219,7 +223,7 @@ namespace imajuscule {
                 return AUDIO_CHANNEL_NONE;
             }
             Init();
-            return data.openChannel(volume, p, xfade_length);
+            return data.template openChannel<WithLock::Yes>(volume, p, xfade_length);
         }
 
         void play( uint8_t channel_id, StackVector<Request> && v ) {

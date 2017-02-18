@@ -11,7 +11,6 @@
 		097835681D57B0EA00E47ED3 /* unity.build.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 097835661D57B0EA00E47ED3 /* unity.build.cpp */; };
 		09C682D51E28945600C2716D /* channel.h in Headers */ = {isa = PBXBuildFile; fileRef = 09C682D21E28945600C2716D /* channel.h */; };
 		09C682D61E28945600C2716D /* stereo.h in Headers */ = {isa = PBXBuildFile; fileRef = 09C682D31E28945600C2716D /* stereo.h */; };
-		09C682D71E28945600C2716D /* oscillator.h in Headers */ = {isa = PBXBuildFile; fileRef = 09C682D41E28945600C2716D /* oscillator.h */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -40,7 +39,6 @@
 		09C645B71E0ED37000153C61 /* request.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = request.cpp; path = source/request.cpp; sourceTree = "<group>"; };
 		09C682D21E28945600C2716D /* channel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = channel.h; path = include/channel.h; sourceTree = "<group>"; };
 		09C682D31E28945600C2716D /* stereo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = stereo.h; path = include/stereo.h; sourceTree = "<group>"; };
-		09C682D41E28945600C2716D /* oscillator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = oscillator.h; path = include/oscillator.h; sourceTree = "<group>"; };
 		09C682D81E28E44600C2716D /* channel.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = channel.cpp; path = source/channel.cpp; sourceTree = "<group>"; };
 		09C84A441C271D95002CF5B7 /* osx.debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = osx.debug.xcconfig; sourceTree = "<group>"; };
 		09C84A451C271D95002CF5B7 /* ios.debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = ios.debug.xcconfig; sourceTree = "<group>"; };
@@ -135,7 +133,6 @@
 				09C682D21E28945600C2716D /* channel.h */,
 				09C645B51E0ECBBF00153C61 /* note.h */,
 				09E7B1331BB5CA29007BAA5F /* os.audio.h */,
-				09C682D41E28945600C2716D /* oscillator.h */,
 				09C645B21E0EC84D00153C61 /* out.h */,
 				09C645AD1E0ADCEE00153C61 /* parse.music.h */,
 				09CA7B291E05A25600E9CDF3 /* public.h */,
@@ -156,7 +153,6 @@
 			files = (
 				09C682D61E28945600C2716D /* stereo.h in Headers */,
 				09C682D51E28945600C2716D /* channel.h in Headers */,
-				09C682D71E28945600C2716D /* oscillator.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
