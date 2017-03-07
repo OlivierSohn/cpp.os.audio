@@ -49,7 +49,7 @@ namespace imajuscule {
             , bWasNeg(true)
             {
                 filter_.initWithSampleRate(((float)SAMPLE_RATE)/(float)sampling_period,
-                                           50);
+                                           50.f/(2.f*M_PI));
             }
             
             void feed(SAMPLE val)
