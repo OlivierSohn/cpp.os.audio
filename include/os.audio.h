@@ -48,7 +48,7 @@ namespace imajuscule {
             , signal_range(0.f,0.f)
             , bWasNeg(true)
             {
-                filter_.initWithSampleRate(((float)SAMPLE_RATE)/(float)sampling_period,
+                filter_.initWithFreq(((float)SAMPLE_RATE)/(float)sampling_period,
                                            50.f/(2.f*M_PI));
             }
             
