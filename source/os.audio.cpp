@@ -877,10 +877,8 @@ InternalResult FreqFromZC::computeWhileLocked(float & f)
         }
     }
 
-    auto cycleStart = positive_zeros_dist.cycleEnd();
-    for_each(cycleStart, end, data.step);
-    for_each(positive_zeros_dist.begin(), cycleStart, data.step);
-
+    positive_zeros_dist.for_each(data.step);
+    
     if(data.total)
     {
         // enable result if:
