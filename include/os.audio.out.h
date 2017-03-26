@@ -1,0 +1,96 @@
+
+
+namespace imajuscule {
+    class Audio;
+    
+    class AudioOut : public NonCopyable {
+        
+        static constexpr auto xfade_on_close = 200;
+        static constexpr auto n_max_orchestrators_per_channel = 1;
+        
+        // members
+        
+        PaStream *stream = nullptr;
+        bool bInitialized : 1;
+        bool closing : 1;
+        outputData data{
+            std::numeric_limits<uint8_t>::max(),
+            n_max_orchestrators_per_channel
+        };
+        Sounds sounds;
+
+        // methods
+    private:
+        friend class Audio;
+
+        AudioOut() : bInitialized(false), closing(false) {}
+        ~AudioOut() {
+            data.closeAllChannels(0); // needs to be called before 'Sounds' destructor
+        }
+        
+        void Init();
+        void TearDown();
+
+    public:
+        using Volumes = decltype(data)::Volumes;
+        static constexpr auto nAudioOut = decltype(data)::nOuts;
+        using Request = decltype(data)::Request;
+
+        auto & getChannelHandler() { return data; }
+        void onApplicationShouldClose() {
+            if(closing) {
+                return;
+            }
+            closing = true;
+            data.closeAllChannels(xfade_on_close);
+            LG(INFO, "Fading out Audio before shutdown...");
+        }
+        
+        bool Initialized() const { return bInitialized; }
+        uint8_t openChannel(float volume = 1.f,
+                            ChannelClosingPolicy p = ChannelClosingPolicy::ExplicitClose,
+                            int xfade_length = 401) {
+            if(closing) {
+                return AUDIO_CHANNEL_NONE;
+            }
+            Init();
+            return data.template openChannel<WithLock::Yes>(volume, p, xfade_length);
+        }
+
+        void play( uint8_t channel_id, StackVector<Request> && v ) {
+            if(closing) {
+                return;
+            }
+            data.play( channel_id, std::move( v ) );
+        }
+        
+        template<class ...Args>
+        void playGeneric( uint8_t channel_id, Args&& ...args ) {
+            if(closing) {
+                return;
+            }
+            data.playGeneric( channel_id, std::forward<Args>( args )... );
+        }
+        
+        void setVolume( uint8_t channel_id, float volume ) {
+            if(closing) {
+                return;
+            }
+            data.setVolume( channel_id, volume);
+        }
+
+        void closeChannel(uint8_t channel_id, CloseMode mode) {
+            if(closing) {
+                return;
+            }
+            data.closeChannel( channel_id, mode );
+        }
+        
+        int get_xfade_millis(uint8_t channel_id) const {
+            return data.getChannel(channel_id).duration_millis_xfade();
+        }
+        
+        Sounds & editSounds() { return sounds; }
+    };
+
+}

@@ -1,0 +1,5 @@
+// this was introduced to reduce the dependencies for Wind on ios
+MY_PREPROCESSOR_DEFINITIONS = NO_AUDIO_IN
+
+#include "../../shared/xcode.config/ios.debug.xcconfig"
+#include "ios.xcconfig"

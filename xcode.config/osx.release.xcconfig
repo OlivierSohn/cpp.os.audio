@@ -1,3 +1,4 @@
+MY_PREPROCESSOR_DEFINITIONS =
 
 #include "../../shared/xcode.config/osx.release.xcconfig"
 #include "osx.xcconfig"
