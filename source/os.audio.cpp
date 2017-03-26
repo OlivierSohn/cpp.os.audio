@@ -143,9 +143,11 @@ int initAudioStreams(AudioUnit & audioUnit, void * data, AURenderCallback cb, in
     return 0;
 }
 
+#ifndef NO_AUDIO_IN
 int initAudioStreams(AudioUnit & audioUnit, imajuscule::Sensor::paTestData & data, AURenderCallback cb, int nOuts) {
     return initAudioStreams(audioUnit, &data, cb, nOuts);
 }
+#endif
 
 int initAudioStreams(AudioUnit & audioUnit, outputData & data, AURenderCallback cb, int nOuts) {
     

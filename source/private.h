@@ -34,7 +34,9 @@ struct iOSOutputData {
 
 int initAudioSession();
 int initAudioStreams(AudioUnit & audioUnit, void * data, AURenderCallback cb, int nOuts);
+#ifndef NO_AUDIO_IN
 int initAudioStreams(AudioUnit & audioUnit, imajuscule::Sensor::paTestData & data, AURenderCallback cb, int nOuts);
+#endif
 int initAudioStreams(AudioUnit & audioUnit, outputData & data, AURenderCallback cb, int nOuts);
 
 OSStatus startAudioUnit(AudioUnit audioUnit);
