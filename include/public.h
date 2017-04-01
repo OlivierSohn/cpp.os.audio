@@ -18,9 +18,6 @@
 #include "../../audio/include/public.h"
 
 #include "os.audio.out.h"
-
-#ifndef NO_AUDIO_IN
-# include "os.audio.in.h"
-#endif
-
+#include "os.audio.in.h"
 #include "os.audio.h"
+#include "instrument.h"

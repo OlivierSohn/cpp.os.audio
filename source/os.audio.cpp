@@ -21,9 +21,9 @@ Audio * Audio::getInstance()
     return Globals::ptr<Audio>(gInstance);
 }
 
-void Audio::Init() {
+void Audio::Init(OutInitPolicy p) {
     if(auto i = Audio::getInstance()) {
-        i->doInit();
+        i->doInit(p);
     }
 }
 
@@ -183,7 +183,7 @@ OSStatus stopProcessingAudio(AudioUnit audioUnit) {
 }
 #endif
 
-void Audio::doInit() {
+void Audio::doInit(OutInitPolicy p) {
 
 #if TARGET_OS_IOS
 #else
@@ -219,6 +219,9 @@ void Audio::doInit() {
 #ifndef NO_AUDIO_IN
     audioIn.Init();
 #endif
+    if(p == OutInitPolicy::FORCE) {
+        audioOut.Init();
+    }
 }
 
 void Audio::doTearDown() {

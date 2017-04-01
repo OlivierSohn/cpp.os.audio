@@ -8,7 +8,12 @@ namespace imajuscule {
         static constexpr auto nAudioOut = AudioOut::nAudioOut;
         using Request = typename AudioOut::Request;
 
-        static void Init();
+        enum class OutInitPolicy {
+            LAZY, // in this mode audio out is initialized upon first call to AudioOut::openChannel
+            FORCE
+        };
+        static void Init(OutInitPolicy);
+
         static void TearDown();
         static Audio * getInstance();
         
@@ -18,12 +23,10 @@ namespace imajuscule {
         Audio() = default;
         ~Audio() = default;
         static Audio * gInstance;
-#ifndef NO_AUDIO_IN
         Sensor::AudioIn audioIn;
-#endif
         AudioOut audioOut;
         
-        void doInit();
+        void doInit(OutInitPolicy);
         void doTearDown();
     };
 }

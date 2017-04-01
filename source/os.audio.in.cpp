@@ -18,8 +18,10 @@ OSStatus renderCallback_in(void                        *userData,
                                       numFrames,
                                       buffers);
     if(status != noErr) {
+        if(status == kAudioUnitErr_CannotDoInCurrentContext) {
+            LG(ERR, "the app probably went in the background, need to return something else?");
+        }
         LG(ERR,"renderCallback (audio) : error %d", status);
-        A(0);
         return status;
     }
     
@@ -104,6 +106,10 @@ void AudioIn::Init()
 }
 
 bool AudioIn::do_wakeup() {
+#ifdef NO_AUDIO_IN
+    A(0);
+    return false;
+#else
     LG(INFO, "AudioIn::do_wakeup : AudioIn will wake up");
 #if TARGET_OS_IOS
     if(0==initAudioSession())
@@ -212,9 +218,14 @@ bool AudioIn::do_wakeup() {
 
     LG(INFO, "AudioIn::do_wakeup : AudioIn is woken up");
     return true;
+#endif
 }
 
 bool AudioIn::do_sleep() {
+#ifdef NO_AUDIO_IN
+    A(0);
+    return false;
+#else
     LG(INFO, "AudioIn::do_sleep : AudioIn will sleep");
 
 #if TARGET_OS_IOS
@@ -246,6 +257,7 @@ bool AudioIn::do_sleep() {
     
     LG(INFO, "AudioIn::do_sleep : AudioIn sleeping");
     return true;
+#endif
 }
 
 void AudioIn::TearDown()

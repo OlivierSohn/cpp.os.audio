@@ -3,10 +3,6 @@ using namespace imajuscule;
 using namespace imajuscule::Sensor;
 
 
-/* This routine will be called by the PortAudio engine when audio is needed.
- ** It may be called at interrupt level on some machines so don't do anything
- ** that could mess up the system like calling malloc() or free().
- */
 #if TARGET_OS_IOS
 
 AudioUnit audioUnit_out = nullptr;
@@ -25,8 +21,10 @@ OSStatus renderCallback_out(void                        *userData,
                                       numFrames,
                                       buffers);
     if(status != noErr) {
+        if(status == kAudioUnitErr_CannotDoInCurrentContext) {
+            LG(ERR, "the app probably went in the background, need to return something else?");
+        }
         LG(ERR,"renderCallback (audio) : error %d", status);
-        A(0);
         return status;
     }
     

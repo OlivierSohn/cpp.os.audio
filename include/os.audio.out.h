@@ -72,11 +72,11 @@ namespace imajuscule {
             data.playGeneric( channel_id, std::forward<Args>( args )... );
         }
         
-        void setVolume( uint8_t channel_id, float volume ) {
+        void toVolume( uint8_t channel_id, float volume, int nSteps ) {
             if(closing) {
                 return;
             }
-            data.setVolume( channel_id, volume);
+            data.toVolume( channel_id, volume, nSteps);
         }
 
         void closeChannel(uint8_t channel_id, CloseMode mode) {
