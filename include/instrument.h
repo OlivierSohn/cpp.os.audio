@@ -14,6 +14,7 @@ namespace imajuscule {
         void setNotesCount(int n) { while(n > n_notes) { playOne(); } }
         
         void setRandom(bool b) { random = b; }
+        void setSeed(int s) { seed = s; }
         
         void setLinearVolume(float vol) {
             if(unlikely(vol < 0.f)) {
@@ -33,13 +34,16 @@ namespace imajuscule {
         INST instrument;
         float volume = 1.f;
         int n_notes = 0;
+        int seed = 1;
         bool random = false;
+        float pan = 0.f;
+        int program = 0;
         
         void playOne() {
             ++n_notes;
             audio::playOneThing(instrument,
                                 out,
-                                audio::Bird{ 0, volume, 0.f, random });
+                                audio::Voicing{ program, volume, pan, random, seed});
 
         }
     };
