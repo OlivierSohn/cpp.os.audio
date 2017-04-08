@@ -20,10 +20,7 @@ OSStatus renderCallback_out(void                        *userData,
                                       1,
                                       numFrames,
                                       buffers);
-    if(status != noErr) {
-        if(status == kAudioUnitErr_CannotDoInCurrentContext) {
-            LG(ERR, "the app probably went in the background, need to return something else?");
-        }
+    if(unlikely(status != noErr)) {
         LG(ERR,"renderCallback (audio) : error %d", status);
         return status;
     }
