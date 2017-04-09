@@ -1,5 +1,10 @@
 
 namespace imajuscule {
+    
+    // this is a "one for all" type of class, initially designed to handle
+    // wind which has infinite length notes (hence the way n_notes is modified)
+    // and that is now used to play birds.
+    
     template<typename OUT, typename INST>
     struct Instrument {
         
@@ -15,6 +20,7 @@ namespace imajuscule {
         
         void setRandom(bool b) { random = b; }
         void setSeed(int s) { seed = s; }
+        void setProgram(int prog) { program = prog; }
         
         void setLinearVolume(float vol) {
             if(unlikely(vol < 0.f)) {
@@ -29,6 +35,8 @@ namespace imajuscule {
         }
         
         OUT& getOut() { return out; }
+
+        auto const & getPrograms() const { return instrument.getPrograms(); }
     private:
         OUT & out;
         INST instrument;
