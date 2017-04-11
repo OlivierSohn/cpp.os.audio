@@ -40,8 +40,8 @@ namespace imajuscule {
             
             A(ILE_SUCCESS == res);
             
-            float stride = reader.getSampleRate() / static_cast<float>(SAMPLE_RATE);
-            std::vector<double> buf(static_cast<int>(reader.countFrames() / stride) * reader.countChannels());
+            FFT_T stride = reader.getSampleRate() / static_cast<float>(SAMPLE_RATE);
+            std::vector<FFT_T> buf(static_cast<int>(reader.countFrames() / stride) * reader.countChannels());
             auto end = reader.ReadWithLinInterpStrideAsFloat(buf.begin(), buf.end(), stride);
             buf.resize(std::distance(buf.begin(), end));
             
