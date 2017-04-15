@@ -23,36 +23,15 @@ namespace imajuscule {
     private:
         friend class Audio;
 
-        AudioOut() : bInitialized(false), closing(false) {
-            using namespace audio;
-            
-            constexpr auto dirname = "audio.ir/nyc.showroom";
-            constexpr auto filename = "BigRoomStereo (16).wav";
-            resource rsrc;
-            auto found = findResource(filename, dirname, rsrc);
-            if(!found) {
-                LG(WARN, "impulse response not found");
-                return;
-            }
-            WAVReader reader(rsrc.first, rsrc.second);
-            
-            auto res = reader.Initialize();
-            
-            A(ILE_SUCCESS == res);
-            
-            FFT_T stride = reader.getSampleRate() / static_cast<float>(SAMPLE_RATE);
-            std::vector<FFT_T> buf(static_cast<int>(reader.countFrames() / stride) * reader.countChannels());
-            auto end = reader.ReadSignedWithLinInterpStrideAsFloat(buf.begin(), buf.end(), stride);
-            buf.resize(std::distance(buf.begin(), end));
-            
-            data.setConvolutionReverbIR(std::move(buf), reader.countChannels());
-        }
+        AudioOut() : bInitialized(false), closing(false) {}
         
         ~AudioOut() {
             data.closeAllChannels(0); // needs to be called before 'Sounds' destructor
         }
         
         void Init();
+        bool doInit();
+        void initializeConvolutionReverb();
         void TearDown();
 
     public:

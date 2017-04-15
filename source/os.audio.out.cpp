@@ -2,6 +2,10 @@
 using namespace imajuscule;
 using namespace imajuscule::Sensor;
 
+constexpr auto initial_n_audio_cb_frames = -1;
+
+// no need to synchronize access to this : it's aligned 4 bytes, amd only one thread writes it (the audio thread) except for initialization time
+int32_t n_audio_cb_frames = initial_n_audio_cb_frames;
 
 #if TARGET_OS_IOS
 
@@ -14,6 +18,8 @@ OSStatus renderCallback_out(void                        *userData,
                             UInt32                      numFrames,
                             AudioBufferList             *buffers) {
     
+    n_audio_cb_frames = numFrames;
+
     OSStatus status = AudioUnitRender(audioUnit_out,
                                       actionFlags,
                                       audioTimeStamp,
@@ -47,11 +53,13 @@ OSStatus renderCallback_out(void                        *userData,
 }
 #else
 static int playCallback( const void *inputBuffer, void *outputBuffer,
-                          unsigned long nFrames,
+                          unsigned long numFrames,
                           const PaStreamCallbackTimeInfo* timeInfo,
                           PaStreamCallbackFlags statusFlags,
                           void *userData )
 {
+    n_audio_cb_frames = numFrames;
+
     outputData *data = (outputData*)userData;
     
     (void) outputBuffer;
@@ -59,17 +67,22 @@ static int playCallback( const void *inputBuffer, void *outputBuffer,
     (void) statusFlags;
     (void) userData;
     
-    data->step((SAMPLE*)outputBuffer, (int)nFrames);
+    data->step((SAMPLE*)outputBuffer, static_cast<int>(numFrames));
     
     return paContinue;
 }
 #endif
-
 void AudioOut::Init() {
     if(bInitialized) {
         return;
     }
-    LG(INFO, "AudioOut::Init");
+    if(doInit()) {
+        initializeConvolutionReverb();
+    }
+}
+
+bool AudioOut::doInit() {
+    LG(INFO, "AudioOut::doInit");
 #if TARGET_OS_IOS
     bInitialized = true;
     if(0==initAudioSession())
@@ -79,55 +92,55 @@ void AudioOut::Init() {
             OSStatus res = startAudioUnit(audioUnit_out);
             if( noErr != res )
             {
-                LG(ERR, "AudioOut::Init : startAudioUnit failed : %d", res);
+                LG(ERR, "AudioOut::doInit : startAudioUnit failed : %d", res);
                 A(0);
-                return;
+                return false;
             }
         }
         else
         {
-            LG(ERR, "AudioOut::Init : initAudioStreams failed");
+            LG(ERR, "AudioOut::doInit : initAudioStreams failed");
             A(0);
-            return;
+            return false;
         }
     }
     else
     {
-        LG(ERR, "AudioOut::Init : initAudioSession failed");
+        LG(ERR, "AudioOut::doInit : initAudioSession failed");
         A(0);
-        return;
+        return false;
     }
 #else
     
-    LG(INFO, "AudioOut::Init : initializing %s", Pa_GetVersionText());
+    LG(INFO, "AudioOut::doInit : initializing %s", Pa_GetVersionText());
     PaError err = Pa_Initialize();
     if(likely(err == paNoError)) {
         bInitialized = true;
         
-        LG(INFO, "AudioOut::Init : done initializing %s", Pa_GetVersionText());
+        LG(INFO, "AudioOut::doInit : done initializing %s", Pa_GetVersionText());
         
-        LG(INFO,"AudioOut::Init : %d host apis", Pa_GetHostApiCount());
+        LG(INFO,"AudioOut::doInit : %d host apis", Pa_GetHostApiCount());
         
         PaStreamParameters p;
         p.device = Pa_GetDefaultOutputDevice();
         if (unlikely(p.device == paNoDevice)) {
-            LG(ERR, "AudioOut::Init : No default output device");
+            LG(ERR, "AudioOut::doInit : No default output device");
             A(0);
-            return;
+            return false;
         }
-        LG(INFO, "AudioOut::Init : audio device : id %d", p.device);
+        LG(INFO, "AudioOut::doInit : audio device : id %d", p.device);
         
         p.channelCount = nAudioOut;
         p.sampleFormat = IMJ_PORTAUDIO_SAMPLE_TYPE;
         
         auto pi = Pa_GetDeviceInfo( p.device );
-        LG(INFO, "AudioOut::Init : audio device : hostApi    %d", pi->hostApi);
-        LG(INFO, "AudioOut::Init : audio device : name       %s", pi->name);
-        LG(INFO, "AudioOut::Init : audio device : maxIC      %d", pi->maxInputChannels);
-        LG(INFO, "AudioOut::Init : audio device : maxOC      %d", pi->maxOutputChannels);
-        LG(INFO, "AudioOut::Init : audio device : def. sr    %f", pi->defaultSampleRate);
-        LG(INFO, "AudioOut::Init : audio device : def. lolat %f", pi->defaultLowOutputLatency);
-        LG(INFO, "AudioOut::Init : audio device : def. holat %f", pi->defaultHighOutputLatency);
+        LG(INFO, "AudioOut::doInit : audio device : hostApi    %d", pi->hostApi);
+        LG(INFO, "AudioOut::doInit : audio device : name       %s", pi->name);
+        LG(INFO, "AudioOut::doInit : audio device : maxIC      %d", pi->maxInputChannels);
+        LG(INFO, "AudioOut::doInit : audio device : maxOC      %d", pi->maxOutputChannels);
+        LG(INFO, "AudioOut::doInit : audio device : def. sr    %f", pi->defaultSampleRate);
+        LG(INFO, "AudioOut::doInit : audio device : def. lolat %f", pi->defaultLowOutputLatency);
+        LG(INFO, "AudioOut::doInit : audio device : def. holat %f", pi->defaultHighOutputLatency);
         
         p.suggestedLatency = /*4* trying to resolve crack at the beg*/nAudioOut *
         // on windows it's important to not set suggestedLatency too low, else samples are lost (for example only 16 are available per timestep)
@@ -148,34 +161,67 @@ void AudioOut::Init() {
         if( unlikely(err != paNoError) )
         {
             stream = nullptr;
-            LG(ERR, "AudioOut::Init : Pa_OpenStream failed : %s", Pa_GetErrorText(err));
+            LG(ERR, "AudioOut::doInit : Pa_OpenStream failed : %s", Pa_GetErrorText(err));
             A(0);
-            return;
+            return false;
         }
         
         const PaStreamInfo * si = Pa_GetStreamInfo(stream);
         
-        LG(INFO, "AudioOut::Init : stream : output lat  %f", si->outputLatency);
-        LG(INFO, "AudioOut::Init : stream : input lat   %f", si->inputLatency);
-        LG(INFO, "AudioOut::Init : stream : sample rate %f", si->sampleRate);
+        LG(INFO, "AudioOut::doInit : stream : output lat  %f", si->outputLatency);
+        LG(INFO, "AudioOut::doInit : stream : input lat   %f", si->inputLatency);
+        LG(INFO, "AudioOut::doInit : stream : sample rate %f", si->sampleRate);
         
         err = Pa_StartStream( stream );
         if( unlikely(err != paNoError) )
         {
-            LG(ERR, "AudioOut::Init : Pa_StartStream failed : %s", Pa_GetErrorText(err));
+            LG(ERR, "AudioOut::doInit : Pa_StartStream failed : %s", Pa_GetErrorText(err));
             A(0);
-            return;
+            return false;
         }
     }
     else
     {
-        LG(ERR, "AudioOut::Init : PA_Initialize failed : %s", Pa_GetErrorText(err));
+        LG(ERR, "AudioOut::doInit : PA_Initialize failed : %s", Pa_GetErrorText(err));
         A(0);
-        return;
+        return false;
     }
 #endif
     
-    LG(INFO, "AudioOut::Init : success");
+    LG(INFO, "AudioOut::doInit : success");
+    return true;
+}
+
+void AudioOut::initializeConvolutionReverb()
+{
+    using namespace audio;
+    
+    constexpr auto dirname = "audio.ir/nyc.showroom";
+    constexpr auto filename = "BigRoomStereo (16).wav";
+    resource rsrc;
+    auto found = findResource(filename, dirname, rsrc);
+    if(!found) {
+        LG(WARN, "impulse response not found");
+        return;
+    }
+    WAVReader reader(rsrc.first, rsrc.second);
+    
+    auto res = reader.Initialize();
+    
+    A(ILE_SUCCESS == res);
+    
+    FFT_T stride = reader.getSampleRate() / static_cast<float>(SAMPLE_RATE);
+    std::vector<FFT_T> buf(static_cast<int>(reader.countFrames() / stride) * reader.countChannels());
+    auto end = reader.ReadSignedWithLinInterpStrideAsFloat(buf.begin(), buf.end(), stride);
+    buf.resize(std::distance(buf.begin(), end));
+    
+    // Wait for first audio callback call to set this value.
+    // Note this could deadlock if there is an audio bug at os level
+    while(n_audio_cb_frames == initial_n_audio_cb_frames) {
+        std::this_thread::yield();
+    }
+    
+    data.setConvolutionReverbIR(std::move(buf), reader.countChannels(), n_audio_cb_frames);
 }
 
 void AudioOut::TearDown() {
