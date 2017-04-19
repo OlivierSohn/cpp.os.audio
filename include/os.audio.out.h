@@ -1,6 +1,40 @@
 
 
 namespace imajuscule {
+    namespace audio {
+        constexpr auto initial_n_audio_cb_frames = -1;
+        
+        int wait_for_first_n_audio_cb_frames();
+        
+        template<typename OutputData>
+        void useConvolutionReverb(OutputData & data,
+                                  std::string const & dirname, std::string const & filename) {
+            
+            resource rsrc;
+            auto found = findResource(filename, dirname, rsrc);
+            if(!found) {
+                LG(WARN, "impulse response not found");
+                return;
+            }
+            WAVReader reader(rsrc.first, rsrc.second);
+            
+            auto res = reader.Initialize();
+            
+            A(ILE_SUCCESS == res);
+            
+            FFT_T stride = reader.getSampleRate() / static_cast<float>(SAMPLE_RATE);
+            //FFT_T stride = 1.f;
+            std::vector<FFT_T> buf(static_cast<int>(reader.countFrames() / stride) * reader.countChannels());
+            MultiChannelDownSampling<decltype(reader)> mci(reader);
+            mci.Read(buf.begin(), buf.end(), stride);
+            buf.resize(std::distance(buf.begin(), buf.end()));
+            
+            data.setConvolutionReverbIR(std::move(buf),
+                                        reader.countChannels(),
+                                        wait_for_first_n_audio_cb_frames());
+        }
+    }
+
     class Audio;
     
     class AudioOut : public NonCopyable {

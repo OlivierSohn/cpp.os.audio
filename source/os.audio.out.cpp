@@ -1,12 +1,23 @@
 
 using namespace imajuscule;
+using namespace imajuscule::audio;
 using namespace imajuscule::Sensor;
 
-constexpr auto initial_n_audio_cb_frames = -1;
+// no need to synchronize access to this : it's 4 bytes-aligned, amd only one thread writes it (the audio thread) except for initialization time
 
-// no need to synchronize access to this : it's aligned 4 bytes, amd only one thread writes it (the audio thread) except for initialization time
 int32_t n_audio_cb_frames = initial_n_audio_cb_frames;
 
+namespace imajuscule {
+    namespace audio {
+        int wait_for_first_n_audio_cb_frames() {
+            // Note this could deadlock if there is an audio bug at os level
+            while(n_audio_cb_frames == initial_n_audio_cb_frames) {
+                std::this_thread::yield();
+            }
+            return n_audio_cb_frames;
+        }
+    }
+}
 #if TARGET_OS_IOS
 
 AudioUnit audioUnit_out = nullptr;
@@ -193,35 +204,10 @@ bool AudioOut::doInit() {
 }
 
 void AudioOut::initializeConvolutionReverb()
-{
-    using namespace audio;
-    
+{    
     constexpr auto dirname = "audio.ir/nyc.showroom";
     constexpr auto filename = "BigRoomStereo (16).wav";
-    resource rsrc;
-    auto found = findResource(filename, dirname, rsrc);
-    if(!found) {
-        LG(WARN, "impulse response not found");
-        return;
-    }
-    WAVReader reader(rsrc.first, rsrc.second);
-    
-    auto res = reader.Initialize();
-    
-    A(ILE_SUCCESS == res);
-    
-    FFT_T stride = reader.getSampleRate() / static_cast<float>(SAMPLE_RATE);
-    std::vector<FFT_T> buf(static_cast<int>(reader.countFrames() / stride) * reader.countChannels());
-    auto end = reader.ReadSignedWithLinInterpStrideAsFloat(buf.begin(), buf.end(), stride);
-    buf.resize(std::distance(buf.begin(), end));
-    
-    // Wait for first audio callback call to set this value.
-    // Note this could deadlock if there is an audio bug at os level
-    while(n_audio_cb_frames == initial_n_audio_cb_frames) {
-        std::this_thread::yield();
-    }
-    
-    data.setConvolutionReverbIR(std::move(buf), reader.countChannels(), n_audio_cb_frames);
+    audio::useConvolutionReverb(data, dirname, filename);
 }
 
 void AudioOut::TearDown() {
