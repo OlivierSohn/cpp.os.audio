@@ -9,20 +9,23 @@ namespace imajuscule {
         constexpr auto impulse_responses_root_dir = "audio.ir";
 
         template<typename OutputData>
-        void useConvolutionReverb(OutputData & data,
+        bool useConvolutionReverb(OutputData & data,
                                   std::string const & dirname, std::string const & filename) {
             
             resource rsrc;
             auto found = findResource(filename, dirname, rsrc);
             if(!found) {
                 LG(WARN, "impulse response not found");
-                return;
+                return false;
             }
             WAVReader reader(rsrc.first, rsrc.second);
             
             auto res = reader.Initialize();
             
-            A(ILE_SUCCESS == res);
+            if(ILE_SUCCESS != res) {
+                LG(WARN, "Cannot read '%s' as a '.wav' file. It might be corrupted!", filename.c_str());
+                return false;
+            }
             
             FFT_T stride = reader.getSampleRate() / static_cast<float>(SAMPLE_RATE);
             //FFT_T stride = 1.f;
@@ -34,6 +37,7 @@ namespace imajuscule {
             data.setConvolutionReverbIR(std::move(buf),
                                         reader.countChannels(),
                                         wait_for_first_n_audio_cb_frames());
+            return true;
         }
     }
 
