@@ -205,8 +205,9 @@ bool AudioOut::doInit() {
 
 void AudioOut::initializeConvolutionReverb()
 {    
-    constexpr auto dirname = "audio.ir/nyc.showroom";
+    std::string dirname = std::string(impulse_responses_root_dir) + "/nyc.showroom";
     constexpr auto filename = "BigRoomStereo (16).wav";
+    //constexpr auto filename = "BigRoomMono (1).wav";
     audio::useConvolutionReverb(data, dirname, filename);
 }
 

@@ -6,6 +6,8 @@ namespace imajuscule {
         
         int wait_for_first_n_audio_cb_frames();
         
+        constexpr auto impulse_responses_root_dir = "audio.ir";
+
         template<typename OutputData>
         void useConvolutionReverb(OutputData & data,
                                   std::string const & dirname, std::string const & filename) {
@@ -25,7 +27,7 @@ namespace imajuscule {
             FFT_T stride = reader.getSampleRate() / static_cast<float>(SAMPLE_RATE);
             //FFT_T stride = 1.f;
             std::vector<FFT_T> buf(static_cast<int>(reader.countFrames() / stride) * reader.countChannels());
-            MultiChannelDownSampling<decltype(reader)> mci(reader);
+            MultiChannelReSampling<decltype(reader)> mci(reader);
             mci.Read(buf.begin(), buf.end(), stride);
             buf.resize(std::distance(buf.begin(), buf.end()));
             
