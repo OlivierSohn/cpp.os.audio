@@ -27,7 +27,7 @@ namespace imajuscule {
                 LG(ERR, "negative volume");
                 vol = 0.f;
             }
-            if(unlikely(vol > 50.f)) {
+            else if(unlikely(vol > 50.f)) {
                 LG(ERR, "too high volume");
                 vol = 50.f;
             }

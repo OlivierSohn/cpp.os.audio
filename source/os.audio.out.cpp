@@ -204,10 +204,12 @@ bool AudioOut::doInit() {
 }
 
 void AudioOut::initializeConvolutionReverb()
-{    
-    std::string dirname = std::string(impulse_responses_root_dir) + "/nyc.showroom";
-    constexpr auto filename = "BigRoomStereo (16).wav";
-    //constexpr auto filename = "BigRoomMono (1).wav";
+{
+    // this one needs to be high pass filtered (5hz loud stuff)
+    //std::string dirname = std::string(impulse_responses_root_dir) + "/nyc.showroom";
+    //constexpr auto filename = "BigRoomStereo (16).wav";
+    std::string dirname = std::string(impulse_responses_root_dir) + "/im.reverbs";
+    constexpr auto filename = "Conic Long Echo Hall.wav";
     audio::useConvolutionReverb(data, dirname, filename);
 }
 
