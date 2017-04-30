@@ -9,6 +9,11 @@ namespace imajuscule {
         constexpr auto impulse_responses_root_dir = "audio.ir";
 
         template<typename OutputData>
+        bool dontUseConvolutionReverb(OutputData & data) {
+            data.dontUseConvolutionReverbs();
+        }
+        
+        template<typename OutputData>
         bool useConvolutionReverb(OutputData & data,
                                   std::string const & dirname, std::string const & filename) {
             

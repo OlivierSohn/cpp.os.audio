@@ -205,12 +205,16 @@ bool AudioOut::doInit() {
 
 void AudioOut::initializeConvolutionReverb()
 {
+    // for Wind app we want to let the user decide to have reverb
+    audio::dontUseConvolutionReverb(data);
+
     // this one needs to be high pass filtered (5hz loud stuff)
-    //std::string dirname = std::string(impulse_responses_root_dir) + "/nyc.showroom";
-    //constexpr auto filename = "BigRoomStereo (16).wav";
-    std::string dirname = std::string(impulse_responses_root_dir) + "/im.reverbs";
-    constexpr auto filename = "Conic Long Echo Hall.wav";
+/*    std::string dirname = std::string(impulse_responses_root_dir) + "/nyc.showroom";
+    constexpr auto filename = "BigRoomStereo (16).wav";
+    //std::string dirname = std::string(impulse_responses_root_dir) + "/im.reverbs";
+    //constexpr auto filename = "Conic Long Echo Hall.wav";
     audio::useConvolutionReverb(data, dirname, filename);
+  */  
 }
 
 void AudioOut::TearDown() {
