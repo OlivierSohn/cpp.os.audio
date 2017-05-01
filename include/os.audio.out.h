@@ -9,7 +9,7 @@ namespace imajuscule {
         constexpr auto impulse_responses_root_dir = "audio.ir";
 
         template<typename OutputData>
-        bool dontUseConvolutionReverb(OutputData & data) {
+        void dontUseConvolutionReverb(OutputData & data) {
             data.dontUseConvolutionReverbs();
         }
         
@@ -32,8 +32,14 @@ namespace imajuscule {
                 return false;
             }
             
+            auto mod = reader.countChannels() % OutputData::nOuts;
+            if((reader.countChannels() > OutputData::nOuts) && mod) {
+                LG(ERR, "cannot use a '%d' channels reverb for '%d' outs", reader.countChannels(), OutputData::nOuts);
+                return false;
+            }
+            
             FFT_T stride = reader.getSampleRate() / static_cast<float>(SAMPLE_RATE);
-            //FFT_T stride = 1.f;
+           
             std::vector<FFT_T> buf(static_cast<int>(reader.countFrames() / stride) * reader.countChannels());
             MultiChannelReSampling<decltype(reader)> mci(reader);
             mci.Read(buf.begin(), buf.end(), stride);

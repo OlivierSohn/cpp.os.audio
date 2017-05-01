@@ -21,6 +21,7 @@ namespace imajuscule {
         void setRandom(bool b) { random = b; }
         void setSeed(int s) { seed = s; }
         void setProgram(int prog) { program = prog; }
+        void setPan(float p) { pan = p; }
         
         void setLinearVolume(float vol) {
             if(unlikely(vol < 0.f)) {
