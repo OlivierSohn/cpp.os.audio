@@ -44,13 +44,23 @@ OSStatus renderCallback_out(void                        *userData,
     
     auto ios_data = reinterpret_cast<iOSOutputData*>(userData);
     auto sizeBuffer = numFrames * AudioOut::nAudioOut;
+    for (UInt32 i=0; i<buffers->mNumberBuffers; ++i) {
+        // might be less than previous value (when using parot headphones in bluetooth)
+        auto v = buffers->mBuffers[i].mDataByteSize / sizeof(SInt16);
+        if(v < sizeBuffer) {
+            LG(INFO, "diff %d", sizeBuffer-v);
+            sizeBuffer = v;
+        }
+        break;
+    }
+    
     auto & outputBuffer = ios_data->buf;
     outputBuffer.resize(sizeBuffer); // hopefully we already reserved enough
     
     ios_data->data->step(outputBuffer.data(), numFrames);
     
     for (UInt32 i=0; i<buffers->mNumberBuffers; ++i) {
-        A(sizeBuffer * sizeof(SInt16) == buffers->mBuffers[i].mDataByteSize);
+        A(sizeBuffer * sizeof(SInt16) <= buffers->mBuffers[i].mDataByteSize);
         A(AudioOut::nAudioOut == buffers->mBuffers[i].mNumberChannels);
         auto buffer = (SInt16*)(buffers->mBuffers[i].mData);
         for( UInt32 j=0; j<sizeBuffer; j++ ) {

@@ -37,6 +37,15 @@ namespace imajuscule {
         
         OUT& getOut() { return out; }
 
+        bool knowsIfIsPlaying() const {
+            return INST::use_orchestrators;
+        }
+        bool isPlaying() const {
+            // works only if underlying instrument uses orchestrators
+            assert(knowsIfIsPlaying());
+            return out.hasOrchestrators();
+        }
+        
         auto const & getPrograms() const { return instrument.getPrograms(); }
     private:
         OUT & out;
