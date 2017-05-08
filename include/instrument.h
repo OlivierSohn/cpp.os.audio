@@ -8,6 +8,8 @@ namespace imajuscule {
     template<typename OUT, typename INST>
     struct Instrument {
         
+        using Inst = INST;
+        
         Instrument(OUT & out) : out(out) {
             instrument.initializeSlow();
         }
