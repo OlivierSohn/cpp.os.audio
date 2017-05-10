@@ -30,17 +30,6 @@ OSStatus renderCallback_out(void                        *userData,
                             AudioBufferList             *buffers) {
     
     n_audio_cb_frames = numFrames;
-
-    OSStatus status = AudioUnitRender(audioUnit_out,
-                                      actionFlags,
-                                      audioTimeStamp,
-                                      1,
-                                      numFrames,
-                                      buffers);
-    if(unlikely(status != noErr)) {
-        LG(ERR,"renderCallback (audio) : error %d", status);
-        return status;
-    }
     
     auto ios_data = reinterpret_cast<iOSOutputData*>(userData);
     auto sizeBuffer = numFrames * AudioOut::nAudioOut;

@@ -71,8 +71,17 @@ int initAudioSession() {
 }
 
 int initAudioStreams(AudioUnit & audioUnit, void * data, AURenderCallback cb, int nOuts) {
-    UInt32 audioCategory = //kAudioSessionCategory_RecordAudio;
-    kAudioSessionCategory_PlayAndRecord;
+    UInt32 audioCategory =
+#ifdef NO_AUDIO_IN
+    kAudioSessionCategory_MediaPlayback
+#else
+    // this looks wrong, maybe we can optimize : why should we need play and record for both audiounits??
+    
+    // cf http://stackoverflow.com/questions/27932879/remoteio-audiounit-playback-quality-not-tied-to-callback-runtime-but-to-somethi
+
+    kAudioSessionCategory_PlayAndRecord
+#endif
+    ;
     if(AudioSessionSetProperty(kAudioSessionProperty_AudioCategory,
                                sizeof(UInt32), &audioCategory) != noErr) {
         return 1;
@@ -95,18 +104,37 @@ int initAudioStreams(AudioUnit & audioUnit, void * data, AURenderCallback cb, in
         return 1;
     }
     
-    UInt32 enable = 1;
+    
+    AudioUnitElement const outputBus = 0;
+    AudioUnitElement const inputBus = 1;
+    
+    //https://developer.apple.com/library/content/technotes/tn2091/_index.html
+    UInt32 enable =
+#ifdef NO_AUDIO_IN
+    0
+#else
+    1
+#endif
+    ;
+    
+    if(auto err = AudioUnitSetProperty(audioUnit, kAudioOutputUnitProperty_EnableIO,
+                            kAudioUnitScope_Input, inputBus, &enable, sizeof(UInt32))) {
+        LG(ERR, "0: %d", err);
+        return 1;
+    }
+    enable = 1;
     if(AudioUnitSetProperty(audioUnit, kAudioOutputUnitProperty_EnableIO,
-                            kAudioUnitScope_Input, 1, &enable, sizeof(UInt32)) != noErr) {
+                            kAudioUnitScope_Output, outputBus, &enable, sizeof(UInt32)) != noErr) {
         return 1;
     }
     
     AURenderCallbackStruct callbackStruct;
     callbackStruct.inputProc = cb;
     callbackStruct.inputProcRefCon = data;
-    if(AudioUnitSetProperty(audioUnit, kAudioUnitProperty_SetRenderCallback,
-                            kAudioUnitScope_Input, 0, &callbackStruct,
-                            sizeof(AURenderCallbackStruct)) != noErr) {
+    if(auto err = AudioUnitSetProperty(audioUnit, kAudioUnitProperty_SetRenderCallback,
+                            kAudioUnitScope_Input, outputBus, &callbackStruct,
+                            sizeof(AURenderCallbackStruct))) {
+        LG(ERR, "1: %d", err);
         return 1;
     }
     
@@ -131,12 +159,13 @@ int initAudioStreams(AudioUnit & audioUnit, void * data, AURenderCallback cb, in
     streamDescription.mReserved = 0;
     
     if(AudioUnitSetProperty(audioUnit, kAudioUnitProperty_StreamFormat,
-                            kAudioUnitScope_Input, 0, &streamDescription, sizeof(streamDescription)) != noErr) {
+                            kAudioUnitScope_Input, outputBus, &streamDescription, sizeof(streamDescription)) != noErr) {
         return 1;
     }
     
-    if(AudioUnitSetProperty(audioUnit, kAudioUnitProperty_StreamFormat,
-                            kAudioUnitScope_Output, 1, &streamDescription, sizeof(streamDescription)) != noErr) {
+    if(auto err = AudioUnitSetProperty(audioUnit, kAudioUnitProperty_StreamFormat,
+                                       kAudioUnitScope_Output, inputBus, &streamDescription, sizeof(streamDescription))) {
+        LG(ERR, "2: %d", err);
         return 1;
     }
     
