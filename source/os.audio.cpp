@@ -70,7 +70,9 @@ int initAudioSession() {
     return 0;
 }
 
-int initAudioStreams(AudioUnit & audioUnit, void * data, AURenderCallback cb, int nOuts) {
+int initAudioStreams(AudioUnit & audioUnit, void * data,
+                     AURenderCallback cb, int nOuts,
+                     AudioStreamBasicDescription & streamDescription) {
     UInt32 audioCategory =
 #ifdef NO_AUDIO_IN
     kAudioSessionCategory_MediaPlayback
@@ -138,7 +140,6 @@ int initAudioStreams(AudioUnit & audioUnit, void * data, AURenderCallback cb, in
         return 1;
     }
     
-    AudioStreamBasicDescription streamDescription;
     // You might want to replace this with a different value, but keep in mind that the
     // iPhone does not support all sample rates. 8kHz, 22kHz, and 44.1kHz should all work.
     streamDescription.mSampleRate = SAMPLE_RATE;
@@ -173,17 +174,17 @@ int initAudioStreams(AudioUnit & audioUnit, void * data, AURenderCallback cb, in
 }
 
 #ifndef NO_AUDIO_IN
-int initAudioStreams(AudioUnit & audioUnit, imajuscule::Sensor::paTestData & data, AURenderCallback cb, int nOuts) {
-    return initAudioStreams(audioUnit, &data, cb, nOuts);
+int initAudioStreams(AudioUnit & audioUnit, imajuscule::Sensor::paTestData & data, AURenderCallback cb, int nOuts, AudioStreamBasicDescription & streamDescription) {
+    return initAudioStreams(audioUnit, &data, cb, nOuts, streamDescription);
 }
 #endif
 
-int initAudioStreams(AudioUnit & audioUnit, outputData & data, AURenderCallback cb, int nOuts) {
+int initAudioStreams(AudioUnit & audioUnit, outputData & data, AURenderCallback cb, int nOuts, AudioStreamBasicDescription & streamDescription) {
     
     static iOSOutputData ios_odata;
     A(!ios_odata.data || (ios_odata.data==&data));
     ios_odata.data = &data;
-    return initAudioStreams(audioUnit, &ios_odata, cb, nOuts);
+    return initAudioStreams(audioUnit, &ios_odata, cb, nOuts, streamDescription);
 }
 
 

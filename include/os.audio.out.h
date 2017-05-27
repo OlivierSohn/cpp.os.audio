@@ -71,7 +71,7 @@ namespace imajuscule {
         Sounds sounds;
 
         // methods
-    private:
+
         friend class Audio;
 
         AudioOut() : bInitialized(false), closing(false) {}
@@ -145,6 +145,19 @@ namespace imajuscule {
         }
         
         Sounds & editSounds() { return sounds; }
+        
+#if TARGET_OS_IOS    
+        AudioUnit getAudioUnit() const {
+            return audioUnit_out;
+        }
+
+        AudioStreamBasicDescription const & getStreamDescription() const {
+            return desc;
+        }
+    private:
+        AudioStreamBasicDescription desc;
+        AudioUnit audioUnit_out = nullptr;
+#endif
     };
 
 }

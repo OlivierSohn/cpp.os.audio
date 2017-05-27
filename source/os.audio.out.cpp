@@ -20,7 +20,6 @@ namespace imajuscule {
 }
 #if TARGET_OS_IOS
 
-AudioUnit audioUnit_out = nullptr;
 
 OSStatus renderCallback_out(void                        *userData,
                             AudioUnitRenderActionFlags  *actionFlags,
@@ -97,7 +96,7 @@ bool AudioOut::doInit() {
     bInitialized = true;
     if(0==initAudioSession())
     {
-        if(0==initAudioStreams(audioUnit_out, data, renderCallback_out, nAudioOut))
+        if(0==initAudioStreams(audioUnit_out, data, renderCallback_out, nAudioOut, desc))
         {
             OSStatus res = startAudioUnit(audioUnit_out);
             if( noErr != res )

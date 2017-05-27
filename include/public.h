@@ -17,6 +17,10 @@
 #include "../../cg.math/include/public.h"
 #include "../../audio/include/public.h"
 
+#if TARGET_OS_IOS
+# import <AudioToolbox/AUComponent.h>
+#endif
+
 #include "os.audio.out.h"
 #include "os.audio.in.h"
 #include "os.audio.h"

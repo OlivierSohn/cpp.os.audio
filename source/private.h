@@ -33,11 +33,11 @@ struct iOSOutputData {
 };
 
 int initAudioSession();
-int initAudioStreams(AudioUnit & audioUnit, void * data, AURenderCallback cb, int nOuts);
+int initAudioStreams(AudioUnit & audioUnit, void * data, AURenderCallback cb, int nOuts, AudioStreamBasicDescription & streamDescription);
 #ifndef NO_AUDIO_IN
-int initAudioStreams(AudioUnit & audioUnit, imajuscule::Sensor::paTestData & data, AURenderCallback cb, int nOuts);
+int initAudioStreams(AudioUnit & audioUnit, imajuscule::Sensor::paTestData & data, AURenderCallback cb, int nOuts, AudioStreamBasicDescription & streamDescription);
 #endif
-int initAudioStreams(AudioUnit & audioUnit, outputData & data, AURenderCallback cb, int nOuts);
+int initAudioStreams(AudioUnit & audioUnit, outputData & data, AURenderCallback cb, int nOuts, AudioStreamBasicDescription & streamDescription);
 
 OSStatus startAudioUnit(AudioUnit audioUnit);
 OSStatus stopProcessingAudio(AudioUnit audioUnit);
