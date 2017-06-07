@@ -114,7 +114,9 @@ bool AudioIn::do_wakeup() {
 #if TARGET_OS_IOS
     if(0==initAudioSession())
     {
-        if(0==initAudioStreams(audioUnit_in, data, renderCallback_in, 1))
+        AudioStreamBasicDescription desc;
+
+        if(0==initAudioStreams(audioUnit_in, data, renderCallback_in, 1, desc))
         {
             OSStatus res;
             res = startAudioUnit(audioUnit_in);
