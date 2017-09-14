@@ -107,7 +107,7 @@ void AudioIn::Init()
 
 bool AudioIn::do_wakeup() {
 #ifdef NO_AUDIO_IN
-    A(0);
+    Assert(0);
     return false;
 #else
     LG(INFO, "AudioIn::do_wakeup : AudioIn will wake up");
@@ -123,14 +123,14 @@ bool AudioIn::do_wakeup() {
             if( noErr != res )
             {
                 LG(ERR, "AudioIn::do_wakeup : startAudioUnit failed : %d", res);
-                A(0);
+                Assert(0);
                 return false;
             }
         }
         else
         {
             LG(ERR, "AudioIn::do_wakeup : initAudioStreams failed");
-            A(0);
+            Assert(0);
             return false;
         }
     }
@@ -138,7 +138,7 @@ bool AudioIn::do_wakeup() {
     {
         LG(ERR, "AudioIn::do_wakeup : initAudioSession failed");
         // fails on simulator
-        //A(0);
+        //Assert(0);
         return false;
     }
 #else
@@ -155,7 +155,7 @@ bool AudioIn::do_wakeup() {
         inputParameters.device = Pa_GetDefaultInputDevice();
         if (unlikely(inputParameters.device == paNoDevice)) {
             LG(ERR, "AudioIn::do_wakeup : No default input device");
-            A(0);
+            Assert(0);
             return false;
         }
         LG(INFO, "AudioIn::do_wakeup : audio device : id %d", inputParameters.device);
@@ -192,7 +192,7 @@ bool AudioIn::do_wakeup() {
         {
             stream = nullptr;
             LG(ERR, "AudioIn::do_wakeup : Pa_OpenStream failed : %s", Pa_GetErrorText(err));
-            A(0);
+            Assert(0);
             return false;
         }
         
@@ -206,14 +206,14 @@ bool AudioIn::do_wakeup() {
         if( unlikely(err != paNoError) )
         {
             LG(ERR, "AudioIn::do_wakeup : Pa_StartStream failed : %s", Pa_GetErrorText(err));
-            A(0);
+            Assert(0);
             return false;
         }
     }
     else
     {
         LG(ERR, "AudioIn::do_wakeup : PA_Initialize failed : %s", Pa_GetErrorText(err));
-        A(0);
+        Assert(0);
         return false;
     }
 #endif
@@ -225,7 +225,7 @@ bool AudioIn::do_wakeup() {
 
 bool AudioIn::do_sleep() {
 #ifdef NO_AUDIO_IN
-    A(0);
+    Assert(0);
     return false;
 #else
     LG(INFO, "AudioIn::do_sleep : AudioIn will sleep");
@@ -234,7 +234,7 @@ bool AudioIn::do_sleep() {
     OSStatus err = stopProcessingAudio(audioUnit_in);
     if( noErr != err ) {
         LG(ERR, "AudioIn::do_sleep : stopProcessingAudio failed : %d", err);
-        A(0);
+        Assert(0);
         return false;
     }
 #else
@@ -244,7 +244,7 @@ bool AudioIn::do_sleep() {
         stream = nullptr;
         if( unlikely(err != paNoError) ) {
             LG(ERR, "AudioIn::do_sleep : Pa_CloseStream failed : %s", Pa_GetErrorText(err));
-            A(0);
+            Assert(0);
             return false;
         }
     }
@@ -285,7 +285,7 @@ InternalResult AlgoMax::computeWhileLocked(float &f)
 }
 InternalResult AlgoMax::compute(float &f)
 {
-    A(0);
+    Assert(0);
     return InternalResult::COMPLETE_ERROR;
 }
 
@@ -326,7 +326,7 @@ static void plot(const char*title,const std::vector<SAMPLE>&v)
 
 InternalResult FreqFromZC::compute(float & f)
 {
-    A(0);
+    Assert(0);
     return InternalResult::COMPLETE_ERROR;
 }
 InternalResult FreqFromZC::computeWhileLocked(float & f)

@@ -48,8 +48,8 @@ OSStatus renderCallback_out(void                        *userData,
     ios_data->data->step(outputBuffer.data(), numFrames);
     
     for (UInt32 i=0; i<buffers->mNumberBuffers; ++i) {
-        A(sizeBuffer * sizeof(SInt16) <= buffers->mBuffers[i].mDataByteSize);
-        A(AudioOut::nAudioOut == buffers->mBuffers[i].mNumberChannels);
+        Assert(sizeBuffer * sizeof(SInt16) <= buffers->mBuffers[i].mDataByteSize);
+        Assert(AudioOut::nAudioOut == buffers->mBuffers[i].mNumberChannels);
         auto buffer = (SInt16*)(buffers->mBuffers[i].mData);
         for( UInt32 j=0; j<sizeBuffer; j++ ) {
             auto val = (SInt16)(outputBuffer[j] * 32767.f);
@@ -102,21 +102,21 @@ bool AudioOut::doInit() {
             if( noErr != res )
             {
                 LG(ERR, "AudioOut::doInit : startAudioUnit failed : %d", res);
-                A(0);
+                Assert(0);
                 return false;
             }
         }
         else
         {
             LG(ERR, "AudioOut::doInit : initAudioStreams failed");
-            A(0);
+            Assert(0);
             return false;
         }
     }
     else
     {
         LG(ERR, "AudioOut::doInit : initAudioSession failed");
-        A(0);
+        Assert(0);
         return false;
     }
 #else
@@ -134,7 +134,7 @@ bool AudioOut::doInit() {
         p.device = Pa_GetDefaultOutputDevice();
         if (unlikely(p.device == paNoDevice)) {
             LG(ERR, "AudioOut::doInit : No default output device");
-            A(0);
+            Assert(0);
             return false;
         }
         LG(INFO, "AudioOut::doInit : audio device : id %d", p.device);
@@ -171,7 +171,7 @@ bool AudioOut::doInit() {
         {
             stream = nullptr;
             LG(ERR, "AudioOut::doInit : Pa_OpenStream failed : %s", Pa_GetErrorText(err));
-            A(0);
+            Assert(0);
             return false;
         }
         
@@ -185,14 +185,14 @@ bool AudioOut::doInit() {
         if( unlikely(err != paNoError) )
         {
             LG(ERR, "AudioOut::doInit : Pa_StartStream failed : %s", Pa_GetErrorText(err));
-            A(0);
+            Assert(0);
             return false;
         }
     }
     else
     {
         LG(ERR, "AudioOut::doInit : PA_Initialize failed : %s", Pa_GetErrorText(err));
-        A(0);
+        Assert(0);
         return false;
     }
 #endif
@@ -224,7 +224,7 @@ void AudioOut::TearDown() {
         OSStatus err = stopProcessingAudio(audioUnit_out);
         if( noErr != err ) {
             LG(ERR, "AudioOut::TearDown : stopProcessingAudio failed : %d", err);
-            A(0);
+            Assert(0);
             return;
         }
     }
@@ -235,7 +235,7 @@ void AudioOut::TearDown() {
         stream = nullptr;
         if( unlikely(err != paNoError) ) {
             LG(ERR, "AudioOut::TearDown : Pa_CloseStream failed : %s", Pa_GetErrorText(err));
-            A(0);
+            Assert(0);
             return;
         }
     }

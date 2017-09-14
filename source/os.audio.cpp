@@ -182,7 +182,7 @@ int initAudioStreams(AudioUnit & audioUnit, imajuscule::Sensor::paTestData & dat
 int initAudioStreams(AudioUnit & audioUnit, outputData & data, AURenderCallback cb, int nOuts, AudioStreamBasicDescription & streamDescription) {
     
     static iOSOutputData ios_odata;
-    A(!ios_odata.data || (ios_odata.data==&data));
+    Assert(!ios_odata.data || (ios_odata.data==&data));
     ios_odata.data = &data;
     return initAudioStreams(audioUnit, &ios_odata, cb, nOuts, streamDescription);
 }
@@ -224,7 +224,7 @@ void Audio::doInit(OutInitPolicy p) {
     if(unlikely(erri))
     {
         LG(ERR, "AudioIn::get : Could not set env variable PA_MIN_LATENCY_MSEC: %d", errno);
-        A(0);
+        Assert(0);
     }
     
     // verify that env var was set
@@ -239,8 +239,8 @@ void Audio::doInit(OutInitPolicy p) {
     const char * test = getenv (lat);
 #endif
     
-    A(test);
-    A(!strcmp(test, latVal));
+    Assert(test);
+    Assert(!strcmp(test, latVal));
 #ifdef _WIN32
     free(test);
 #endif
