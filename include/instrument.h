@@ -24,6 +24,9 @@ namespace imajuscule {
         void setSeed(int s) { seed = s; }
         void setProgram(int prog) { program = prog; }
         void setPan(float p) { pan = p; }
+        void setPitch(int16_t p) {
+            midiPitch = p;
+        }
         
         void setLinearVolume(float vol) {
             if(unlikely(vol < 0.f)) {
@@ -54,6 +57,7 @@ namespace imajuscule {
         INST instrument;
         float volume = 1.f;
         int n_notes = 0;
+        int16_t midiPitch = 50; // too low value to catch when it is not initialized
         int seed = 1;
         bool random = false;
         float pan = 0.f;
@@ -63,7 +67,7 @@ namespace imajuscule {
             ++n_notes;
             audio::playOneThing(instrument,
                                 out,
-                                audio::Voicing{ program, volume, pan, random, seed});
+                                audio::Voicing{ program, midiPitch, volume, pan, random, seed});
 
         }
     };
