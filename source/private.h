@@ -1,4 +1,4 @@
-#include "public.h"
+#include "../include/public.h"
 
 #define  _USE_MATH_DEFINES
 #include <cmath>
@@ -22,12 +22,12 @@ struct iOSOutputData {
     // we cannot know for sure how much the os will ask us to compute.
     // on my iPhone 4s I observed 512 was asked.
     static constexpr auto initial_buffer_size = 1024;
-    
+
     iOSOutputData() {
         // preallocate to avoid dynamic allocation in audio thread
         buf.reserve(initial_buffer_size);
     }
-    
+
     outputData * data = nullptr;
     std::vector<outputData::T> buf;
 };
