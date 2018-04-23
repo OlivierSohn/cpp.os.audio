@@ -90,6 +90,9 @@ void paTestData::step(const SAMPLE *rptr, int nFrames)
 
 void AudioIn::Init()
 {
+#ifdef NO_AUDIO_IN
+    Assert(0);
+#else
     if(bInitialized_)
     {
         LG(WARN, "AudioIn::Init already initialized");
@@ -103,6 +106,7 @@ void AudioIn::Init()
     data.algo_freq.setActivator(this);
 
     bInitialized_ = true;
+#endif
 }
 
 bool AudioIn::do_wakeup() {
@@ -264,6 +268,9 @@ bool AudioIn::do_sleep() {
 
 void AudioIn::TearDown()
 {
+#ifdef NO_AUDIO_IN
+    Assert(0);
+#else
     Activator::sleep();
 
     if(bInitialized_) {
@@ -275,6 +282,7 @@ void AudioIn::TearDown()
     else {
         LG(ERR, "AudioIn::TearDown : was not initialized");
     }
+#endif
 }
 
 InternalResult AlgoMax::computeWhileLocked(float &f)
