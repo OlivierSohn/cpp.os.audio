@@ -22,6 +22,10 @@
 #endif
 
 #include "os.audio.out.h"
-#include "os.audio.in.h"
+
+#ifndef NO_AUDIO_IN
+# include "os.audio.in.h"
+#endif
+
 #include "os.audio.h"
 #include "instrument.h"

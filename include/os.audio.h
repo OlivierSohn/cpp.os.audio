@@ -1,7 +1,7 @@
 
 
 namespace imajuscule {
-    
+
     class Audio {
         friend class Globals;
     public:
@@ -16,16 +16,20 @@ namespace imajuscule {
 
         static void TearDown();
         static Audio * getInstance();
-        
+
         AudioOut & out() { return audioOut; }
-        
+
     private:
         Audio() = default;
         ~Audio() = default;
         static Audio * gInstance;
+
+        #ifndef NO_AUDIO_IN
         Sensor::AudioIn audioIn;
+        #endif
+
         AudioOut audioOut;
-        
+
         void doInit(OutInitPolicy);
         void doTearDown();
     };
