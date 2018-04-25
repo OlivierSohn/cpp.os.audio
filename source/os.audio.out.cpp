@@ -27,9 +27,9 @@ OSStatus renderCallback_out(void                        *userData,
                             UInt32                      busNumber,
                             UInt32                      numFrames,
                             AudioBufferList             *buffers) {
-    
+
     n_audio_cb_frames = numFrames;
-    
+
     auto ios_data = reinterpret_cast<iOSOutputData*>(userData);
     auto sizeBuffer = numFrames * AudioOut::nAudioOut;
     for (UInt32 i=0; i<buffers->mNumberBuffers; ++i) {
@@ -41,12 +41,12 @@ OSStatus renderCallback_out(void                        *userData,
         }
         break;
     }
-    
+
     auto & outputBuffer = ios_data->buf;
     outputBuffer.resize(sizeBuffer); // hopefully we already reserved enough
-    
+
     ios_data->data->step(outputBuffer.data(), numFrames);
-    
+
     for (UInt32 i=0; i<buffers->mNumberBuffers; ++i) {
         Assert(sizeBuffer * sizeof(SInt16) <= buffers->mBuffers[i].mDataByteSize);
         Assert(AudioOut::nAudioOut == buffers->mBuffers[i].mNumberChannels);
@@ -57,7 +57,7 @@ OSStatus renderCallback_out(void                        *userData,
             ++buffer;
         }
     }
-    
+
     return noErr;
 }
 #else
@@ -70,14 +70,14 @@ static int playCallback( const void *inputBuffer, void *outputBuffer,
     n_audio_cb_frames = numFrames;
 
     outputData *data = (outputData*)userData;
-    
+
     (void) outputBuffer;
     (void) timeInfo;
     (void) statusFlags;
     (void) userData;
-    
+
     data->step((SAMPLE*)outputBuffer, static_cast<int>(numFrames));
-    
+
     return paContinue;
 }
 #endif
@@ -120,16 +120,16 @@ bool AudioOut::doInit() {
         return false;
     }
 #else
-    
+
     LG(INFO, "AudioOut::doInit : initializing %s", Pa_GetVersionText());
     PaError err = Pa_Initialize();
     if(likely(err == paNoError)) {
         bInitialized = true;
-        
+
         LG(INFO, "AudioOut::doInit : done initializing %s", Pa_GetVersionText());
-        
+
         LG(INFO,"AudioOut::doInit : %d host apis", Pa_GetHostApiCount());
-        
+
         PaStreamParameters p;
         p.device = Pa_GetDefaultOutputDevice();
         if (unlikely(p.device == paNoDevice)) {
@@ -138,10 +138,10 @@ bool AudioOut::doInit() {
             return false;
         }
         LG(INFO, "AudioOut::doInit : audio device : id %d", p.device);
-        
+
         p.channelCount = nAudioOut;
         p.sampleFormat = IMJ_PORTAUDIO_SAMPLE_TYPE;
-        
+
         auto pi = Pa_GetDeviceInfo( p.device );
         LG(INFO, "AudioOut::doInit : audio device : hostApi    %d", pi->hostApi);
         LG(INFO, "AudioOut::doInit : audio device : name       %s", pi->name);
@@ -150,13 +150,13 @@ bool AudioOut::doInit() {
         LG(INFO, "AudioOut::doInit : audio device : def. sr    %f", pi->defaultSampleRate);
         LG(INFO, "AudioOut::doInit : audio device : def. lolat %f", pi->defaultLowOutputLatency);
         LG(INFO, "AudioOut::doInit : audio device : def. holat %f", pi->defaultHighOutputLatency);
-        
+
         p.suggestedLatency = /*4* trying to resolve crack at the beg*/nAudioOut *
         // on windows it's important to not set suggestedLatency too low, else samples are lost (for example only 16 are available per timestep)
         pi->defaultLowOutputLatency;
-        
+
         p.hostApiSpecificStreamInfo = nullptr;
-        
+
         /* Listen to some audio. -------------------------------------------- */
         PaError err = Pa_OpenStream(
                                     &stream,
@@ -174,13 +174,13 @@ bool AudioOut::doInit() {
             Assert(0);
             return false;
         }
-        
+
         const PaStreamInfo * si = Pa_GetStreamInfo(stream);
-        
+
         LG(INFO, "AudioOut::doInit : stream : output lat  %f", si->outputLatency);
         LG(INFO, "AudioOut::doInit : stream : input lat   %f", si->inputLatency);
         LG(INFO, "AudioOut::doInit : stream : sample rate %f", si->sampleRate);
-        
+
         err = Pa_StartStream( stream );
         if( unlikely(err != paNoError) )
         {
@@ -196,7 +196,7 @@ bool AudioOut::doInit() {
         return false;
     }
 #endif
-    
+
     LG(INFO, "AudioOut::doInit : success");
     return true;
 }
@@ -212,12 +212,12 @@ void AudioOut::initializeConvolutionReverb()
     //std::string dirname = std::string(impulse_responses_root_dir) + "/im.reverbs";
     //constexpr auto filename = "Conic Long Echo Hall.wav";
     audio::useConvolutionReverb(data, dirname, filename);
-  */  
+  */
 }
 
 void AudioOut::TearDown() {
     LG(INFO, "AudioOut::TearDown");
-    
+
 #if TARGET_OS_IOS
     if( bInitialized ) {
         bInitialized = false;
@@ -239,7 +239,7 @@ void AudioOut::TearDown() {
             return;
         }
     }
-    
+
     if( bInitialized ) { // don't call Pa_Terminate if Pa_Initialize failed
         bInitialized = false;
 
@@ -251,6 +251,6 @@ void AudioOut::TearDown() {
         }
     }
 #endif
-    
+
     LG(INFO, "AudioOut::TearDown : success");
 }
