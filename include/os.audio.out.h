@@ -47,7 +47,7 @@ namespace imajuscule {
 
     class Audio;
 
-    class AudioOut : public NonCopyable {
+    class AudioOut : public NonCopyable { // TODO make a class just for data initialization / teardown to not depend on this one in imj-game-synths
 
         static constexpr auto xfade_on_close = 200;
         static constexpr auto n_max_orchestrators_per_channel = 1;
