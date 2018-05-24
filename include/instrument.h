@@ -12,6 +12,11 @@ namespace imajuscule {
         
         Instrument(OUT & out) : out(out) {
             instrument.initializeSlow();
+            instrument.initialize(out.getChannels());
+        }
+        
+        ~Instrument() {
+            instrument.finalize(out.getChannels());
         }
         
         void startOneNote() { playOne(); }
