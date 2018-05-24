@@ -16,6 +16,11 @@ namespace imajuscule {
             }
             return n_audio_cb_frames;
         }
+
+    }
+    AudioLockPolicyImpl<AudioOutPolicy::Master> & audioLock() {
+        static AudioLockPolicyImpl<AudioOutPolicy::Master> l;
+        return l;
     }
 }
 #if TARGET_OS_IOS
@@ -71,10 +76,8 @@ static int playCallback( const void *inputBuffer, void *outputBuffer,
 
     outputData *data = (outputData*)userData;
 
-    (void) outputBuffer;
     (void) timeInfo;
     (void) statusFlags;
-    (void) userData;
 
     data->step((SAMPLE*)outputBuffer, static_cast<int>(numFrames));
 
@@ -204,7 +207,7 @@ bool AudioOut::doInit() {
 void AudioOut::initializeConvolutionReverb()
 {
     // for Wind app we want to let the user decide to have reverb
-    audio::dontUseConvolutionReverb(data);
+    dontUseConvolutionReverbs(data);
 
     // this one needs to be high pass filtered (5hz loud stuff)
 /*    std::string dirname = std::string(impulse_responses_root_dir) + "/nyc.showroom";

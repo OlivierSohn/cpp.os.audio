@@ -8,10 +8,6 @@ namespace imajuscule {
 
         constexpr auto impulse_responses_root_dir = "audio.ir";
 
-        template<typename OutputData>
-        void dontUseConvolutionReverb(OutputData & data) {
-            data.dontUseConvolutionReverbs();
-        }
 
         template<typename OutputData>
         bool useConvolutionReverb(OutputData & data,
@@ -46,6 +42,8 @@ namespace imajuscule {
     }
 
     class Audio;
+    
+    AudioLockPolicyImpl<AudioOutPolicy::Master> & audioLock();
 
     class AudioOut : public NonCopyable { // TODO make a class just for data initialization / teardown to not depend on this one in imj-game-synths
 
@@ -58,6 +56,7 @@ namespace imajuscule {
         bool bInitialized : 1;
         bool closing : 1;
         outputData data{
+            audioLock(),
             std::numeric_limits<uint8_t>::max(),
             n_max_orchestrators_per_channel
         };
@@ -70,7 +69,7 @@ namespace imajuscule {
         AudioOut() : bInitialized(false), closing(false) {}
 
         ~AudioOut() {
-            data.closeAllChannels(0); // needs to be called before 'Sounds' destructor
+            data.getChannels().closeAllChannels(0); // needs to be called before 'Sounds' destructor
         }
 
         void Init();
@@ -79,21 +78,23 @@ namespace imajuscule {
         void TearDown();
 
     public:
-        using Volumes = decltype(data)::Volumes;
+        using Volumes = decltype(data)::ChannelsT::Volumes;
         static constexpr auto nAudioOut = decltype(data)::nOuts;
-        using Request = decltype(data)::Request;
+        using Request = decltype(data)::ChannelsT::Request;
 
         auto & getChannelHandler() { return data; }
+        
         void onApplicationShouldClose() {
             if(closing) {
                 return;
             }
             closing = true;
-            data.closeAllChannels(xfade_on_close);
+            data.getChannels().closeAllChannels(xfade_on_close);
             LG(INFO, "Fading out Audio before shutdown...");
         }
 
         bool Initialized() const { return bInitialized; }
+
         uint8_t openChannel(float volume = 1.f,
                             ChannelClosingPolicy p = ChannelClosingPolicy::ExplicitClose,
                             int xfade_length = 401) {
@@ -101,14 +102,14 @@ namespace imajuscule {
                 return AUDIO_CHANNEL_NONE;
             }
             Init();
-            return data.template openChannel<WithLock::Yes>(volume, p, xfade_length);
+            return data.getChannels().template openChannel<WithLock::Yes>(volume, p, xfade_length);
         }
 
         void play( uint8_t channel_id, StackVector<Request> && v ) {
             if(closing) {
                 return;
             }
-            data.play( channel_id, std::move( v ) );
+            data.getChannels().play( channel_id, std::move( v ) );
         }
 
         template<class ...Args>
@@ -116,25 +117,25 @@ namespace imajuscule {
             if(closing) {
                 return;
             }
-            data.playGeneric( channel_id, std::forward<Args>( args )... );
+            data.getChannels().playGeneric( data, channel_id, std::forward<Args>( args )... );
         }
 
         void toVolume( uint8_t channel_id, float volume, int nSteps ) {
             if(closing) {
                 return;
             }
-            data.toVolume( channel_id, volume, nSteps);
+            data.getChannels().toVolume( channel_id, volume, nSteps);
         }
 
         void closeChannel(uint8_t channel_id, CloseMode mode) {
             if(closing) {
                 return;
             }
-            data.closeChannel( channel_id, mode );
+            data.getChannels().closeChannel( channel_id, mode );
         }
 
         int get_xfade_millis(uint8_t channel_id) const {
-            return data.getChannel(channel_id).duration_millis_xfade();
+            return data.getConstChannels().getChannel(channel_id).duration_millis_xfade();
         }
 
         Sounds & editSounds() { return sounds; }
