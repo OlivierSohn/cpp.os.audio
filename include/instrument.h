@@ -48,7 +48,7 @@ namespace imajuscule {
         bool isPlaying() const {
             // works only if underlying instrument uses orchestrators
             assert(knowsIfIsPlaying());
-            return out.hasOrchestrators();
+            return out.getChannels().hasOrchestrators();
         }
         
         auto const & getPrograms() const { return instrument.getPrograms(); }
