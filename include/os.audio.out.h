@@ -52,6 +52,7 @@ namespace imajuscule {
         void initializeConvolutionReverb() { ctxt.initializeConvolutionReverb(); }
         void TearDown() { ctxt.TearDown(); }
 
+        auto & getCtxt() { return ctxt; }
         auto & getChannelHandler() { return ctxt.getChannelHandler(); }
         
         void onApplicationShouldClose() {

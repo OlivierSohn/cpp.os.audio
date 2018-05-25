@@ -14,6 +14,6 @@ int initAudioStreams(AudioUnit & audioUnit, void * data, AURenderCallback cb, in
 #ifndef NO_AUDIO_IN
 int initAudioStreams(AudioUnit & audioUnit, imajuscule::sensor::paTestData & data, AURenderCallback cb, int nOuts, AudioStreamBasicDescription & streamDescription);
 #endif
-int initAudioStreams(AudioUnit & audioUnit, outputData & data, AURenderCallback cb, int nOuts, AudioStreamBasicDescription & streamDescription);
+int initAudioStreams(AudioUnit & audioUnit, imajuscule::audio::outputData & data, AURenderCallback cb, int nOuts, AudioStreamBasicDescription & streamDescription);
 
 #endif
