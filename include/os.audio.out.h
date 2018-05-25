@@ -5,7 +5,7 @@ namespace imajuscule {
     
     AudioLockPolicyImpl<AudioOutPolicy::Master> & audioLock();
 
-    class AudioOut : public NonCopyable { // TODO make a class just for data initialization / teardown to not depend on this one in imj-game-synths
+    class AudioOut : public NonCopyable {
 
         static constexpr auto n_max_orchestrators_per_channel = 1;
         
@@ -36,7 +36,6 @@ namespace imajuscule {
         };
         
         Sounds sounds;
-
 
         ~AudioOut() {
             ctxt.finalize(); // needs to be called before 'Sounds' destructor
