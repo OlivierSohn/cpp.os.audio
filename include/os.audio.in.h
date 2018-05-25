@@ -2,7 +2,7 @@
 
 namespace imajuscule {
     class Audio;
-    namespace Sensor {
+    namespace sensor {
 
         constexpr static const float minFreq = 80.f; // in herz (based on my voice :) )
         constexpr static const float maxFreq = 440.f; // in herz (also based on my voice :) )

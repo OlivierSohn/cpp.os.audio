@@ -1,6 +1,6 @@
 
 using namespace imajuscule;
-using namespace imajuscule::Sensor;
+using namespace imajuscule::sensor;
 
 #if TARGET_OS_IOS
 AudioUnit audioUnit_in = nullptr;
@@ -116,14 +116,14 @@ bool AudioIn::do_wakeup() {
 #else
     LG(INFO, "AudioIn::do_wakeup : AudioIn will wake up");
 #if TARGET_OS_IOS
-    if(0==initAudioSession())
+    if(0==audio::initAudioSession())
     {
         AudioStreamBasicDescription desc;
 
         if(0==initAudioStreams(audioUnit_in, data, renderCallback_in, 1, desc))
         {
             OSStatus res;
-            res = startAudioUnit(audioUnit_in);
+            res = audio::startAudioUnit(audioUnit_in);
             if( noErr != res )
             {
                 LG(ERR, "AudioIn::do_wakeup : startAudioUnit failed : %d", res);
@@ -165,7 +165,7 @@ bool AudioIn::do_wakeup() {
         LG(INFO, "AudioIn::do_wakeup : audio device : id %d", inputParameters.device);
         
         inputParameters.channelCount = 1;
-        inputParameters.sampleFormat = IMJ_PORTAUDIO_SAMPLE_TYPE;
+        inputParameters.sampleFormat = audio::PortAudioSample<SAMPLE>::format;
         
         auto pi = Pa_GetDeviceInfo( inputParameters.device );
         LG(INFO, "AudioIn::do_wakeup : audio device : hostApi    %d", pi->hostApi);
@@ -235,7 +235,7 @@ bool AudioIn::do_sleep() {
     LG(INFO, "AudioIn::do_sleep : AudioIn will sleep");
 
 #if TARGET_OS_IOS
-    OSStatus err = stopProcessingAudio(audioUnit_in);
+    OSStatus err = audio::stopProcessingAudio(audioUnit_in);
     if( noErr != err ) {
         LG(ERR, "AudioIn::do_sleep : stopProcessingAudio failed : %d", err);
         Assert(0);

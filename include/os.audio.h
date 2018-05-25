@@ -25,7 +25,7 @@ namespace imajuscule {
         static Audio * gInstance;
 
         #ifndef NO_AUDIO_IN
-        Sensor::AudioIn audioIn;
+        sensor::AudioIn audioIn;
         #endif
 
         AudioOut audioOut;
