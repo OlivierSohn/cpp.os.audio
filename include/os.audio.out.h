@@ -3,8 +3,6 @@
 namespace imajuscule {
     class Audio;
     
-    AudioLockPolicyImpl<AudioOutPolicy::Master> & audioLock();
-
     class AudioOut : public NonCopyable {
 
         static constexpr auto n_max_orchestrators_per_channel = 1;
@@ -30,7 +28,7 @@ namespace imajuscule {
         friend class Audio;
 
         AudioCtxt ctxt{
-            audioLock(),
+            masterAudioLock(),
             std::numeric_limits<uint8_t>::max(),
             n_max_orchestrators_per_channel
         };
