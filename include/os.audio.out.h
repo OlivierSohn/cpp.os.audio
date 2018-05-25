@@ -2,6 +2,12 @@
 
 namespace imajuscule {
     class Audio;
+  namespace audio {
+
+    using outputData = outputDataBase<
+        AudioOutPolicy::Master,
+        Channels<2, XfadePolicy::UseXfade, AudioOutPolicy::Master>
+        >;
     
     class AudioOut : public NonCopyable {
 
@@ -23,7 +29,6 @@ namespace imajuscule {
 
         using AudioCtxt = audio::AudioOutContext<outputData,WithAudioIn,AudioPlat>;
         using Volumes = AudioCtxt::Volumes;
-        using Request = AudioCtxt::Request;
 
         friend class Audio;
 
@@ -35,6 +40,10 @@ namespace imajuscule {
         
         Sounds sounds;
 
+    public:
+        using Request = AudioCtxt::Request;
+        static constexpr auto nAudioOut = AudioCtxt::nAudioOut;
+
         ~AudioOut() {
             ctxt.finalize(); // needs to be called before 'Sounds' destructor
         }
@@ -42,9 +51,6 @@ namespace imajuscule {
         void Init() { ctxt.Init(); }
         void initializeConvolutionReverb() { ctxt.initializeConvolutionReverb(); }
         void TearDown() { ctxt.TearDown(); }
-
-    public:
-        static constexpr auto nAudioOut = AudioCtxt::nAudioOut;
 
         auto & getChannelHandler() { return ctxt.getChannelHandler(); }
         
@@ -80,5 +86,5 @@ namespace imajuscule {
         Sounds & editSounds() { return sounds; }
 
     };
-
+  }
 }

@@ -72,6 +72,7 @@ namespace imajuscule {
             ++n_notes;
             audio::playOneThing(instrument,
                                 out,
+                                out.getChannels(),
                                 audio::Voicing{ program, midiPitch, volume, pan, random, seed});
 
         }

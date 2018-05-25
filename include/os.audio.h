@@ -5,8 +5,8 @@ namespace imajuscule {
     class Audio {
         friend class Globals;
     public:
-        static constexpr auto nAudioOut = AudioOut::nAudioOut;
-        using Request = typename AudioOut::Request;
+        static constexpr auto nAudioOut = audio::AudioOut::nAudioOut;
+        using Request = typename audio::AudioOut::Request;
 
         enum class OutInitPolicy {
             LAZY, // in this mode audio out is initialized upon first call to AudioOut::openChannel
@@ -17,7 +17,7 @@ namespace imajuscule {
         static void TearDown();
         static Audio * getInstance();
 
-        AudioOut & out() { return audioOut; }
+        audio::AudioOut & out() { return audioOut; }
 
     private:
         Audio() = default;
@@ -28,7 +28,7 @@ namespace imajuscule {
         sensor::AudioIn audioIn;
         #endif
 
-        AudioOut audioOut;
+        audio::AudioOut audioOut;
 
         void doInit(OutInitPolicy);
         void doTearDown();
