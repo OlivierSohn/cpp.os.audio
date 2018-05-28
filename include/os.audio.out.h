@@ -33,7 +33,7 @@ namespace imajuscule {
         friend class Audio;
 
         AudioCtxt ctxt{
-            masterAudioLock(),
+            GlobalAudioLock<AudioOutPolicy::Master>::get(),
             std::numeric_limits<uint8_t>::max(),
             n_max_orchestrators_per_channel
         };
