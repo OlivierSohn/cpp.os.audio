@@ -6,7 +6,7 @@ namespace imajuscule {
 
     using outputData = outputDataBase<
         AudioOutPolicy::Master,
-        Channels<2, XfadePolicy::UseXfade, AudioOutPolicy::Master>
+      Channels<2, XfadePolicy::UseXfade, MaxQueueSize::Infinite, AudioOutPolicy::Master>
         >;
     
     class AudioOut : public NonCopyable {
