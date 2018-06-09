@@ -9,14 +9,19 @@ namespace imajuscule {
     struct Instrument {
         
         using Inst = INST;
-        
-        Instrument(OUT & out) : out(out) {
-            instrument.initializeSlow();
-            instrument.initialize(out.getChannels());
+      
+      static constexpr auto n_mnc = Inst::n_channels;
+      using mnc_buffer = typename Inst::MonoNoteChannel::buffer_t;
+
+        Instrument(OUT & out) :
+        instrument(create(buffers))
+      , out(out) {
+            instrument->initializeSlow();
+            instrument->initialize(out.getChannels());
         }
         
         ~Instrument() {
-            instrument.finalize(out.getChannels());
+            instrument->finalize(out.getChannels());
         }
         
         void startOneNote() { playOne(); }
@@ -51,10 +56,11 @@ namespace imajuscule {
             return out.getChannels().hasOrchestratorsOrComputes();
         }
         
-        auto const & getPrograms() const { return instrument.getPrograms(); }
+        auto const & getPrograms() const { return instrument->getPrograms(); }
     private:
         OUT & out;
-        INST instrument;
+        std::array<mnc_buffer,n_mnc> buffers;
+      std::unique_ptr<INST> instrument;
         float volume = 1.f;
         int n_notes = 0;
         int16_t midiPitch = 50; // too low value to catch when it is not initialized
@@ -65,12 +71,25 @@ namespace imajuscule {
         
         void playOne() {
             ++n_notes;
-            audio::playOneThing(instrument,
+            audio::playOneThing(*instrument,
                                 out,
                                 out.getChannels(),
                                 audio::Voicing{ program, midiPitch, volume, pan, random, seed});
 
         }
+      
+      
+      template <class T, size_t N, size_t... Is>
+      static auto create_int(std::array<T, N> & arr,
+                             std::index_sequence<Is...>) {
+        return new Inst(arr[Is]...);
+      }
+      
+      template <class T, size_t N>
+      static auto create(std::array<T, N> & arr) {
+        return create_int(arr, std::make_index_sequence<N>{});
+      }
+      
     };
     
 }
