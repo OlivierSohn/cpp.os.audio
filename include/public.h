@@ -12,7 +12,7 @@
 # include "../../cg.math/include/public.h"
 #endif
 
-#include "../../cpp.os.logs/include/public.h"
+#include "../../cpp.os.log/include/public.h"
 #include "../../cpp.model/include/public.h"
 #include "../../cpp.audio/include/public.h"
 

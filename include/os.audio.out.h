@@ -9,7 +9,7 @@ namespace imajuscule {
       Channels<2, XfadePolicy::UseXfade, MaxQueueSize::Infinite, AudioOutPolicy::Master>
         >;
     
-    class AudioOut : public NonCopyable {
+    struct AudioOut : public NonCopyable {
 
         static constexpr auto n_max_orchestrators_per_channel = 1;
         
@@ -32,6 +32,7 @@ namespace imajuscule {
 
         friend class Audio;
 
+    private:
         AudioCtxt ctxt{
             GlobalAudioLock<AudioOutPolicy::Master>::get(),
             std::numeric_limits<uint8_t>::max(),
@@ -48,7 +49,7 @@ namespace imajuscule {
             ctxt.finalize(); // needs to be called before 'Sounds' destructor
         }
 
-        void Init() { ctxt.Init(); }
+        void Init(float minOutputLatency) { ctxt.Init(minOutputLatency); }
         void initializeConvolutionReverb() { ctxt.initializeConvolutionReverb(); }
         void TearDown() { ctxt.TearDown(); }
 

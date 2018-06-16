@@ -4,6 +4,7 @@ namespace imajuscule {
 
     class Audio {
         friend class Globals;
+      
     public:
         static constexpr auto nAudioOut = audio::AudioOut::nAudioOut;
         using Request = typename audio::AudioOut::Request;
