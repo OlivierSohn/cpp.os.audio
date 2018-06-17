@@ -21,7 +21,7 @@ namespace imajuscule {
         }
         
         ~Instrument() {
-            instrument->finalize(out.getChannels());
+            instrument->finalize();
         }
         
         void startOneNote() { playOne(); }

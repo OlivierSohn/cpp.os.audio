@@ -3,10 +3,11 @@
 namespace imajuscule {
     class Audio;
   namespace audio {
+    
 
     using outputData = outputDataBase<
         AudioOutPolicy::Master,
-      Channels<2, XfadePolicy::UseXfade, MaxQueueSize::Infinite, AudioOutPolicy::Master>
+        ChannelsVecAggregate<2, AudioOutPolicy::Master>
         >;
     
     struct AudioOut : public NonCopyable {
@@ -28,15 +29,15 @@ namespace imajuscule {
 #endif
 
         using AudioCtxt = audio::AudioOutContext<outputData,WithAudioIn,AudioPlat>;
+        using XFadeChans         = typename outputData::ChannelsT::XFadeChans;
+        using XFadeInfiniteChans = typename outputData::ChannelsT::XFadeInfiniteChans;
         using Volumes = AudioCtxt::Volumes;
 
         friend class Audio;
 
     private:
         AudioCtxt ctxt{
-            GlobalAudioLock<AudioOutPolicy::Master>::get(),
-            std::numeric_limits<uint8_t>::max(),
-            n_max_orchestrators_per_channel
+            GlobalAudioLock<AudioOutPolicy::Master>::get()
         };
         
         Sounds sounds;
@@ -48,14 +49,37 @@ namespace imajuscule {
         ~AudioOut() {
             ctxt.finalize(); // needs to be called before 'Sounds' destructor
         }
+      
+        auto & getChannelHandler() { return ctxt.getChannelHandler(); }
 
-        void Init(float minOutputLatency) { ctxt.Init(minOutputLatency); }
+        void Init(float minOutputLatency) {
+          auto p = std::make_unique<XFadeInfiniteChans>(
+                                                getChannelHandler().get_lock_policy(),
+                                                std::numeric_limits<uint8_t>::max(),
+                                                n_max_orchestrators_per_channel);
+          {
+            AudioCtxt::LockFromNRT l(getChannelHandler().get_lock());
+            
+            getChannelHandler().getChannels().getChannelsXFadeInfinite().emplace_back(std::move(p));
+          }
+
+          auto p2 = std::make_unique<XFadeChans>(
+                                                getChannelHandler().get_lock_policy(),
+                                                std::numeric_limits<uint8_t>::max(),
+                                                n_max_orchestrators_per_channel);
+          {
+            AudioCtxt::LockFromNRT l(getChannelHandler().get_lock());
+            
+            getChannelHandler().getChannels().getChannelsXFade().emplace_back(std::move(p2));
+          }
+
+          ctxt.Init(minOutputLatency);
+        }
         void initializeConvolutionReverb() { ctxt.initializeConvolutionReverb(); }
         void TearDown() { ctxt.TearDown(); }
 
         auto & getCtxt() { return ctxt; }
-        auto & getChannelHandler() { return ctxt.getChannelHandler(); }
-        
+      
         void onApplicationShouldClose() {
             ctxt.onApplicationShouldClose();
         }
