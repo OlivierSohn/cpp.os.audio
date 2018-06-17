@@ -17,7 +17,7 @@ namespace imajuscule {
         instrument(create(buffers))
       , out(out) {
             instrument->initializeSlow();
-            instrument->initialize(out.getChannels());
+            instrument->initialize(getFirstXfadeChans());
         }
         
         ~Instrument() {
@@ -52,8 +52,8 @@ namespace imajuscule {
         
         OUT& getOut() { return out; }
 
-        bool isPlaying() const {
-            return out.getChannels().hasOrchestratorsOrComputes();
+        bool isPlaying() {
+            return getFirstXfadeChans().hasOrchestratorsOrComputes();
         }
         
         auto const & getPrograms() const { return instrument->getPrograms(); }
@@ -73,11 +73,15 @@ namespace imajuscule {
             ++n_notes;
             audio::playOneThing(*instrument,
                                 out,
-                                out.getChannels(),
+                                getFirstXfadeChans(),
                                 audio::Voicing{ program, midiPitch, volume, pan, random, seed});
 
         }
-      
+      auto & getFirstXfadeChans() {
+        auto p = out.getChannels().getChannelsXFade()[0].get();
+        Assert(p);
+        return *p;
+      }      
       
       template <class T, size_t N, size_t... Is>
       static auto create_int(std::array<T, N> & arr,
