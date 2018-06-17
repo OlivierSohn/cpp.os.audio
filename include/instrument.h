@@ -9,7 +9,8 @@ namespace imajuscule {
     struct Instrument {
         
         using Inst = INST;
-      
+      static constexpr auto xfade_policy = INST::xfade_policy;
+
       static constexpr auto n_mnc = Inst::n_channels;
       using mnc_buffer = typename Inst::MonoNoteChannel::buffer_t;
 
@@ -17,7 +18,7 @@ namespace imajuscule {
         instrument(create(buffers))
       , out(out) {
             instrument->initializeSlow();
-            instrument->initialize(getFirstXfadeChans());
+            instrument->initialize(getFirstXFadeChans());
         }
         
         ~Instrument() {
@@ -53,7 +54,7 @@ namespace imajuscule {
         OUT& getOut() { return out; }
 
         bool isPlaying() {
-            return getFirstXfadeChans().hasOrchestratorsOrComputes();
+            return getFirstXFadeChans().hasOrchestratorsOrComputes();
         }
         
         auto const & getPrograms() const { return instrument->getPrograms(); }
@@ -73,16 +74,29 @@ namespace imajuscule {
             ++n_notes;
             audio::playOneThing(*instrument,
                                 out,
-                                getFirstXfadeChans(),
+                                getFirstXFadeChans(),
                                 audio::Voicing{ program, midiPitch, volume, pan, random, seed});
 
         }
-      auto & getFirstXfadeChans() {
-        auto p = out.getChannels().getChannelsXFade()[0].get();
+      /*
+      auto & getFirstNoXFadeChans() {
+        auto p = out.getChannels().getChannelsNoXFade()[0].get();
         Assert(p);
         return *p;
-      }      
-      
+      }*/
+      auto & getFirstXFadeChans() {
+        if constexpr (xfade_policy == XfadePolicy::UseXfade) {
+          auto p = out.getChannels().getChannelsXFade()[0].get();
+          Assert(p);
+          return *p;
+        }
+        else {
+          auto p = out.getChannels().getChannelsNoXFade()[0].get();
+          Assert(p);
+          return *p;
+        }
+      }
+
       template <class T, size_t N, size_t... Is>
       static auto create_int(std::array<T, N> & arr,
                              std::index_sequence<Is...>) {

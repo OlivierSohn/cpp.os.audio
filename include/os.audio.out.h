@@ -13,7 +13,7 @@ namespace imajuscule {
     struct AudioOut : public NonCopyable {
 
         static constexpr auto n_max_orchestrators_per_channel = 1;
-        
+
         static constexpr auto AudioPlat =
 #if TARGET_OS_IOS
             audio::AudioPlatform::AudioUnits;
@@ -30,6 +30,7 @@ namespace imajuscule {
 
         using AudioCtxt = audio::AudioOutContext<outputData,WithAudioIn,AudioPlat>;
         using XFadeChans         = typename outputData::ChannelsT::XFadeChans;
+        using NoXFadeChans       = typename outputData::ChannelsT::NoXFadeChans;
         using XFadeInfiniteChans = typename outputData::ChannelsT::XFadeInfiniteChans;
         using Volumes = AudioCtxt::Volumes;
 
@@ -67,6 +68,16 @@ namespace imajuscule {
           AudioCtxt::LockFromNRT l(getChannelHandler().get_lock());
           
           getChannelHandler().getChannels().getChannelsXFade().emplace_back(std::move(p2));
+        }
+
+        auto p3 = std::make_unique<NoXFadeChans>(
+                                               getChannelHandler().get_lock_policy(),
+                                               std::numeric_limits<uint8_t>::max(),
+                                               n_max_orchestrators_per_channel);
+        {
+          AudioCtxt::LockFromNRT l(getChannelHandler().get_lock());
+          
+          getChannelHandler().getChannels().getChannelsNoXFade().emplace_back(std::move(p3));
         }
       }
 
