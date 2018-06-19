@@ -6,8 +6,8 @@ namespace imajuscule {
     
 
     using outputData = outputDataBase<
-        AudioOutPolicy::Master,
-        ChannelsVecAggregate<2, AudioOutPolicy::Master>
+        AudioOutPolicy::MasterGlobalLock,
+        ChannelsVecAggregate<2, AudioOutPolicy::MasterGlobalLock>
         >;
     
     struct AudioOut : public NonCopyable {
@@ -38,7 +38,7 @@ namespace imajuscule {
 
     private:
         AudioCtxt ctxt{
-            GlobalAudioLock<AudioOutPolicy::Master>::get()
+            GlobalAudioLock<AudioOutPolicy::MasterGlobalLock>::get()
         };
         
         Sounds sounds;
