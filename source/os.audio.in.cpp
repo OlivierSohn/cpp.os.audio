@@ -67,7 +67,7 @@ static int recordCallback( const void *inputBuffer, void *outputBuffer,
 
 void paTestData::step(const SAMPLE *rptr, int nFrames)
 {
-    RAIILock l(used);
+    LockGuard l(used);
     
     if( !activator.onStep() && rptr )
     {
