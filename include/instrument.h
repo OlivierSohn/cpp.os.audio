@@ -21,10 +21,6 @@ namespace imajuscule {
             instrument->initialize(getFirstXFadeChans());
         }
         
-        ~Instrument() {
-            instrument->finalize();
-        }
-        
         void startOneNote() { playOne(); }
 
         void stopOneNote() {}
