@@ -15,7 +15,7 @@ namespace imajuscule {
       using mnc_buffer = typename Inst::MonoNoteChannel::buffer_t;
 
         Instrument(OUT & out) :
-        instrument(create(buffers))
+      instrument(std::make_unique<Inst>(buffers))
       , out(out) {
             instrument->initializeSlow();
             instrument->initialize(getFirstXFadeChans());
@@ -93,17 +93,6 @@ namespace imajuscule {
         }
       }
 
-      template <class T, size_t N, size_t... Is>
-      static auto create_int(std::array<T, N> & arr,
-                             std::index_sequence<Is...>) {
-        return new Inst(arr[Is]...);
-      }
-      
-      template <class T, size_t N>
-      static auto create(std::array<T, N> & arr) {
-        return create_int(arr, std::make_index_sequence<N>{});
-      }
-      
     };
     
 }

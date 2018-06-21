@@ -42,7 +42,7 @@ namespace imajuscule {
                 counter = sampling_period;
             }
             
-            FreqFromZC(std::atomic_bool &a)
+            FreqFromZC(std::atomic_flag &a)
             : Sensor<FreqFromZC, NO_LOCK, float>(&a)
             , positive_zeros_dist(16, 0)
             , signal_range(0.f,0.f)
@@ -101,7 +101,7 @@ namespace imajuscule {
             std::string const & getVarName() { return name; }
             const char * getVarDoc() { return "Audio amplitude"; }
             
-            AlgoMax(std::atomic_bool &a)
+            AlgoMax(std::atomic_flag &a)
             : Sensor<AlgoMax, NO_LOCK, float>(&a)
             {}
             InternalResult computeWhileLocked(float & f);
@@ -129,7 +129,8 @@ namespace imajuscule {
             , algo_max(used)
             , avg(sizeSlidingAverage)
             , activator(a)
-            {}
+            {
+            }
             
             void step(const SAMPLE * inputBuffer, int nFrames);
             
@@ -145,7 +146,7 @@ namespace imajuscule {
             Activator & activator;
             slidingAverage<float> avg;
             
-            std::atomic_bool used { false };
+          std::atomic_flag used = ATOMIC_FLAG_INIT;
         };
         
         class AudioIn : public Activator

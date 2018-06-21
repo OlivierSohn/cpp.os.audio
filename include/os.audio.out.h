@@ -109,9 +109,9 @@ namespace imajuscule {
             return ctxt.play(channel_id, std::move(v));
         }
 
-        template<typename T>
-        void playGeneric( uint8_t channel_id, T&buf, Request && req) {
-          return ctxt.playGeneric( channel_id, buf, std::move(req));
+        template<typename F>
+        void playComputable( uint8_t channel_id, F compute, Request && req) {
+          return ctxt.playComputable( channel_id, compute, std::move(req));
         }
 
         void toVolume( uint8_t channel_id, float volume, int nSteps ) {
