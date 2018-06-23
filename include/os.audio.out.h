@@ -33,6 +33,7 @@ namespace imajuscule {
         using NoXFadeChans       = typename outputData::ChannelsT::NoXFadeChans;
         using XFadeInfiniteChans = typename outputData::ChannelsT::XFadeInfiniteChans;
         using Volumes = AudioCtxt::Volumes;
+        static constexpr auto atomicity = outputData::ChannelsT::atomicity;
 
         friend class Audio;
 
@@ -41,7 +42,7 @@ namespace imajuscule {
             GlobalAudioLock<AudioOutPolicy::MasterGlobalLock>::get()
         };
         
-        Sounds sounds;
+        Sounds<atomicity> sounds;
 
     public:
         using Request = AudioCtxt::Request;
@@ -122,7 +123,7 @@ namespace imajuscule {
             ctxt.closeChannel( channel_id, mode );
         }
 
-        Sounds & editSounds() { return sounds; }
+        Sounds<atomicity> & editSounds() { return sounds; }
 
     };
   }
