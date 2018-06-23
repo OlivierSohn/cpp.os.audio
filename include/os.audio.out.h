@@ -6,7 +6,6 @@ namespace imajuscule {
     
 
     using outputData = outputDataBase<
-        AudioOutPolicy::MasterGlobalLock,
         ChannelsVecAggregate<2, AudioOutPolicy::MasterGlobalLock>
         >;
     
@@ -38,9 +37,7 @@ namespace imajuscule {
         friend class Audio;
 
     private:
-        AudioCtxt ctxt{
-            GlobalAudioLock<AudioOutPolicy::MasterGlobalLock>::get()
-        };
+        AudioCtxt ctxt;
         
         Sounds<atomicity> sounds;
 
