@@ -111,7 +111,7 @@ namespace imajuscule {
         }
 
         template<typename F>
-        void playComputable( uint8_t channel_id, F compute, Request && req) {
+        [[nodiscard]] bool playComputable( uint8_t channel_id, F compute, Request && req) {
           return ctxt.playComputable( channel_id, compute, std::move(req));
         }
 
