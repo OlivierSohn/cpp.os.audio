@@ -18,7 +18,7 @@ namespace imajuscule {
       instrument(std::make_unique<Inst>(buffers))
       , out(out) {
             instrument->initializeSlow();
-            instrument->initialize(getFirstXFadeChans());
+            instrument->initialize(*getFirstXFadeChans());
         }
         
         void startOneNote() { playOne(); }
@@ -50,7 +50,7 @@ namespace imajuscule {
         OUT& getOut() { return out; }
 
         bool isPlaying() {
-            return getFirstXFadeChans().hasOrchestratorsOrComputes();
+            return getFirstXFadeChans()->hasOrchestratorsOrComputes();
         }
         
         auto const & getPrograms() const { return instrument->getPrograms(); }
@@ -70,7 +70,7 @@ namespace imajuscule {
             ++n_notes;
             audio::playOneThing(*instrument,
                                 out,
-                                getFirstXFadeChans(),
+                                *getFirstXFadeChans(),
                                 audio::Voicing{ program, midiPitch, volume, pan, random, seed});
 
         }
@@ -80,17 +80,22 @@ namespace imajuscule {
         Assert(p);
         return *p;
       }*/
-      auto & getFirstXFadeChans() {
+      using Ret = std::conditional_t<
+        xfade_policy == XfadePolicy::UseXfade,
+        typename OUT::ChannelsT::XFadeChans,
+        typename OUT::ChannelsT::NoXFadeChans>;
+      Ret * getFirstXFadeChans() {
         if constexpr (xfade_policy == XfadePolicy::UseXfade) {
-          auto p = out.getChannels().getChannelsXFade()[0].get();
-          Assert(p);
-          return *p;
+          if(auto m = out.getChannels().getChannelsXFade().maybe_front()) {
+            return &get_value(m).first;
+          }
         }
         else {
-          auto p = out.getChannels().getChannelsNoXFade()[0].get();
-          Assert(p);
-          return *p;
+          if(auto m = out.getChannels().getChannelsNoXFade().maybe_front()) {
+            return &get_value(m).first;
+          }
         }
+        return {};
       }
 
     };

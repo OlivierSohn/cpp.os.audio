@@ -48,35 +48,17 @@ namespace imajuscule {
       auto & getChannelHandler() { return ctxt.getChannelHandler(); }
 
       AudioOut() {
-        auto p = std::make_unique<XFadeInfiniteChans>(
-                                                      getChannelHandler().get_lock_policy(),
-                                                      std::numeric_limits<uint8_t>::max(),
-                                                      n_max_orchestrators_per_channel);
-        {
-          AudioCtxt::LockFromNRT l(getChannelHandler().get_lock());
-          
-          getChannelHandler().getChannels().getChannelsXFadeInfinite().emplace_back(std::move(p));
-        }
+        getChannelHandler().getChannels().getChannelsXFadeInfinite().emplace_front(getChannelHandler().get_lock_policy(),
+                                                                                   std::numeric_limits<uint8_t>::max(),
+                                                                                   n_max_orchestrators_per_channel);
         
-        auto p2 = std::make_unique<XFadeChans>(
-                                               getChannelHandler().get_lock_policy(),
-                                               std::numeric_limits<uint8_t>::max(),
-                                               n_max_orchestrators_per_channel);
-        {
-          AudioCtxt::LockFromNRT l(getChannelHandler().get_lock());
-          
-          getChannelHandler().getChannels().getChannelsXFade().emplace_back(std::move(p2));
-        }
+        getChannelHandler().getChannels().getChannelsXFade().emplace_front(getChannelHandler().get_lock_policy(),
+                                                                           std::numeric_limits<uint8_t>::max(),
+                                                                           n_max_orchestrators_per_channel);
 
-        auto p3 = std::make_unique<NoXFadeChans>(
-                                               getChannelHandler().get_lock_policy(),
-                                               std::numeric_limits<uint8_t>::max(),
-                                               n_max_orchestrators_per_channel);
-        {
-          AudioCtxt::LockFromNRT l(getChannelHandler().get_lock());
-          
-          getChannelHandler().getChannels().getChannelsNoXFade().emplace_back(std::move(p3));
-        }
+        getChannelHandler().getChannels().getChannelsNoXFade().emplace_front(getChannelHandler().get_lock_policy(),
+                                                                             std::numeric_limits<uint8_t>::max(),
+                                                                             n_max_orchestrators_per_channel);
       }
 
         ~AudioOut() {
@@ -103,13 +85,15 @@ namespace imajuscule {
             return ctxt.openChannel(volume, p, xfade_length);
         }
 
-        void play( uint8_t channel_id, StackVector<Request> && v ) {
+        bool play( uint8_t channel_id, StackVector<Request> && v ) {
             return ctxt.play(channel_id, std::move(v));
         }
 
-        template<typename F>
-        [[nodiscard]] bool playComputable( uint8_t channel_id, F compute, Request && req) {
-          return ctxt.playComputable( channel_id, compute, std::move(req));
+        template<typename Algo>
+        [[nodiscard]] bool playComputable(uint8_t channel_id,
+                                          PackedRequestParams<nAudioOut> params,
+                                          audioelement::FinalAudioElement<Algo> & e) {
+          return ctxt.playComputable( channel_id, params, e);
         }
 
         void toVolume( uint8_t channel_id, float volume, int nSteps ) {
