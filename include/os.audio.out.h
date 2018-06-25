@@ -5,6 +5,10 @@ namespace imajuscule {
   namespace audio {
     
 
+    // These things are missing to be able to use 'MasterLockFree':
+    //   - never read the buffer state from a non rt thread (see editInactiveAudioElement) :
+    //      it is meaningless, because the state is changed by the audio thread.
+
     using outputData = outputDataBase<
         ChannelsVecAggregate<2, AudioOutPolicy::MasterGlobalLock>
         >;
