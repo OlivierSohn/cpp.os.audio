@@ -94,10 +94,9 @@ namespace imajuscule {
         }
 
         template<typename Algo>
-        [[nodiscard]] bool playComputable(uint8_t channel_id,
-                                          PackedRequestParams<nAudioOut> params,
+        [[nodiscard]] bool playComputable(PackedRequestParams<nAudioOut> params,
                                           audioelement::FinalAudioElement<Algo> & e) {
-          return ctxt.playComputable( channel_id, params, e);
+          return ctxt.playComputable(params, e);
         }
 
         void toVolume( uint8_t channel_id, float volume, int nSteps ) {
