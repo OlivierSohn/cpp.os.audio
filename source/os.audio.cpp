@@ -30,7 +30,7 @@ int initAudioStreams(AudioUnit & audioUnit, imajuscule::sensor::paTestData & cha
 #endif
 
 void Audio::doInit(OutInitPolicy p) {
-    imajuscule::audio::setPortaudioLatencyMillis(4); // TODO adapt to minLatency?
+    imajuscule::audio::overridePortaudioMinLatencyMillis(4); // TODO adapt to minLatency?
 
 #ifndef NO_AUDIO_IN
     audioIn.Init();
