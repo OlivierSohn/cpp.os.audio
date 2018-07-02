@@ -50,7 +50,7 @@ namespace imajuscule {
         OUT& getOut() { return out; }
 
         bool isPlaying() {
-            return getFirstXFadeChans()->hasOrchestratorsOrComputes();
+            return getFirstXFadeChans()->hasRealtimeFunctions();
         }
         
         auto const & getPrograms() const { return instrument->getPrograms(); }
