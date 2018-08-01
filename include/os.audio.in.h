@@ -44,7 +44,7 @@ namespace imajuscule {
             
             FreqFromZC(std::atomic_flag &a)
             : Sensor<FreqFromZC, NO_LOCK, float>(&a)
-            , positive_zeros_dist(16, 0)
+            , positive_zeros_dist(16)
             , signal_range(0.f,0.f)
             , bWasNeg(true)
             {
