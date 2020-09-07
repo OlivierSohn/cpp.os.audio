@@ -81,7 +81,7 @@ namespace imajuscule {
             
         private:
             int32_t counter = sampling_period;
-            Filter<float, 1, FilterType::HIGH_PASS> filter_;
+            audio::Filter<float, 1, audio::FilterType::HIGH_PASS> filter_;
             
             cyclic<int> positive_zeros_dist; // zero crossing intervals are recorded over several time steps
             int32_t acc = 0;

@@ -10,7 +10,8 @@ namespace imajuscule {
     //      it is meaningless, because the state is changed by the audio thread.
 
     using outputData = outputDataBase<
-        ChannelsVecAggregate<2, AudioOutPolicy::MasterGlobalLock>
+        ChannelsVecAggregate<2, AudioOutPolicy::MasterGlobalLock>,
+        ReverbType::Realtime_Synchronous
         >;
     
     struct AudioOut : public NonCopyable {

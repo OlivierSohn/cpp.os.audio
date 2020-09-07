@@ -1,5 +1,5 @@
 
-namespace imajuscule {
+namespace imajuscule::audio {
     
     // this is a "one for all" type of class, initially designed to handle
     // wind which has infinite length notes (hence the way n_notes is modified)
