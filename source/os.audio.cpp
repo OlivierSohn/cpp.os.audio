@@ -21,14 +21,6 @@ void Audio::TearDown() {
     }
 }
 
-#if TARGET_OS_IOS
-# ifndef NO_AUDIO_IN
-int initAudioStreams(AudioUnit & audioUnit, imajuscule::sensor::paTestData & chans, AURenderCallback cb, int nOuts, AudioStreamBasicDescription & streamDescription) {
-    return audio::initAudioStreams(audio::Features::InAndOut, audioUnit, &chans, cb, nOuts, streamDescription);
-}
-# endif
-#endif
-
 void Audio::doInit(OutInitPolicy p) {
     imajuscule::audio::overridePortaudioMinLatencyMillis(4); // TODO adapt to minLatency?
 
