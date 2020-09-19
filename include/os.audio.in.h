@@ -159,7 +159,7 @@ class AudioIn : public Activator
 #endif
 
 public:
-  void Init();
+  bool Init();
   void TearDown();
   bool Initialized() const { return bInitialized_; }
 protected:

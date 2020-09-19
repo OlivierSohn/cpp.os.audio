@@ -9,10 +9,11 @@ Audio * Audio::getInstance()
     return Globals::ptr<Audio>(gInstance);
 }
 
-void Audio::Init(OutInitPolicy p) {
-    if(auto i = Audio::getInstance()) {
-        i->doInit(p);
-    }
+[[nodiscard]] bool Audio::Init(OutInitPolicy p) {
+  if(auto i = Audio::getInstance()) {
+    return i->doInit(p);
+  }
+  return false;
 }
 
 void Audio::TearDown() {
@@ -21,15 +22,17 @@ void Audio::TearDown() {
     }
 }
 
-void Audio::doInit(OutInitPolicy p) {
-    imajuscule::audio::overridePortaudioMinLatencyMillis(4); // TODO adapt to minLatency?
-
+bool Audio::doInit(OutInitPolicy p) {
+  imajuscule::audio::overridePortaudioMinLatencyMillis(4); // TODO adapt to minLatency?
+  
+  bool res = true;
 #ifndef NO_AUDIO_IN
-    audioIn.Init();
+  res = audioIn.Init() && res;
 #endif
-    if(p == OutInitPolicy::FORCE) {
-      audioOut.Init(audio::AudioOut::AudioCtxt::minLazyLatency);
-    }
+  if(p == OutInitPolicy::FORCE) {
+    res = audioOut.Init(audio::AudioOut::AudioCtxt::minLazyLatency) && res;
+  }
+  return res;
 }
 
 void Audio::doTearDown() {

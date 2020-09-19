@@ -13,7 +13,7 @@ namespace imajuscule {
             LAZY, // in this mode audio out is initialized upon first call to AudioOut::openChannel
             FORCE
         };
-        static void Init(OutInitPolicy);
+        [[nodiscard]] static bool Init(OutInitPolicy);
 
         static void TearDown();
         static Audio * getInstance();
@@ -31,7 +31,7 @@ namespace imajuscule {
 
         audio::AudioOut audioOut;
 
-        void doInit(OutInitPolicy);
+        bool doInit(OutInitPolicy);
         void doTearDown();
     };
 }

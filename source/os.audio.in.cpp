@@ -25,7 +25,7 @@ void paTestData::step(const SAMPLE *rptr, int nFrames)
     }
 }
 
-void AudioIn::Init()
+bool AudioIn::Init()
 {
 #ifdef NO_AUDIO_IN
     Assert(0);
@@ -33,7 +33,7 @@ void AudioIn::Init()
     if(bInitialized_)
     {
         LG(WARN, "AudioIn::Init already initialized");
-        return;
+        return true;
     }
     
     data.algo_max.Register();
@@ -44,6 +44,7 @@ void AudioIn::Init()
 
     bInitialized_ = true;
 #endif
+  return true;
 }
 
 bool AudioIn::do_wakeup() {
@@ -54,7 +55,7 @@ bool AudioIn::do_wakeup() {
   LG(INFO, "AudioIn::do_wakeup : AudioIn will wake up");
   bool const res = audio_input.Init([this](const SAMPLE * buffer, int nFrames) {
     data.step(buffer, nFrames);
-  });
+  }, SAMPLE_RATE);
   if (res) {
     LG(INFO, "AudioIn::do_wakeup : AudioIn is woken up");
   }

@@ -52,7 +52,9 @@ namespace imajuscule {
       
       auto & getChannelHandler() { return ctxt.getChannelHandler(); }
 
-      AudioOut() {
+      AudioOut()
+      : ctxt(SAMPLE_RATE)
+      {
         getChannelHandler().getChannels().getChannelsXFadeInfinite().emplace_front(getChannelHandler().get_lock_policy(),
                                                                                    std::numeric_limits<uint8_t>::max(),
                                                                                    n_max_orchestrators_per_channel);
@@ -70,8 +72,8 @@ namespace imajuscule {
             ctxt.finalize(); // needs to be called before 'Sounds' destructor
         }
       
-        void Init(float minOutputLatency) {
-          ctxt.Init(minOutputLatency);
+        [[nodiscard]] bool Init(float minOutputLatency) {
+          return ctxt.Init(minOutputLatency);
         }
         void initializeConvolutionReverb() { ctxt.initializeConvolutionReverb(); }
         void TearDown() { ctxt.TearDown(); }
