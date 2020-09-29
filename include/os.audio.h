@@ -29,7 +29,7 @@ namespace imajuscule {
         sensor::AudioIn audioIn;
         #endif
 
-        audio::AudioOut audioOut;
+        audio::AudioOut audioOut{SAMPLE_RATE};
 
         bool doInit(OutInitPolicy);
         void doTearDown();

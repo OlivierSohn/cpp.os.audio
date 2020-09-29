@@ -1,6 +1,5 @@
 
 using namespace imajuscule;
-using namespace imajuscule::sensor;
 
 
 Audio * Audio::gInstance = nullptr;

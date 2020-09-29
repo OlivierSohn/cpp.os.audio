@@ -16,8 +16,6 @@ namespace imajuscule {
     
     struct AudioOut : public NonCopyable {
 
-        static constexpr auto n_max_orchestrators_per_channel = 1;
-
         static constexpr auto AudioPlat =
 #if TARGET_OS_IOS
             audio::AudioPlatform::AudioUnits;
@@ -52,25 +50,26 @@ namespace imajuscule {
       
       auto & getChannelHandler() { return ctxt.getChannelHandler(); }
 
-      AudioOut()
-      : ctxt(SAMPLE_RATE)
+      AudioOut(int sample_rate)
+      : ctxt(sample_rate)
       {
         getChannelHandler().getChannels().getChannelsXFadeInfinite().emplace_front(getChannelHandler().get_lock_policy(),
-                                                                                   std::numeric_limits<uint8_t>::max(),
-                                                                                   n_max_orchestrators_per_channel);
+                                                                                   std::numeric_limits<uint8_t>::max());
         
         getChannelHandler().getChannels().getChannelsXFade().emplace_front(getChannelHandler().get_lock_policy(),
-                                                                           std::numeric_limits<uint8_t>::max(),
-                                                                           n_max_orchestrators_per_channel);
+                                                                           std::numeric_limits<uint8_t>::max());
 
         getChannelHandler().getChannels().getChannelsNoXFade().emplace_front(getChannelHandler().get_lock_policy(),
-                                                                             std::numeric_limits<uint8_t>::max(),
-                                                                             n_max_orchestrators_per_channel);
+                                                                             std::numeric_limits<uint8_t>::max());
       }
 
         ~AudioOut() {
             ctxt.finalize(); // needs to be called before 'Sounds' destructor
         }
+      
+      int getSampleRate() const {
+        return ctxt.getSampleRate();
+      }
       
         [[nodiscard]] bool Init(float minOutputLatency) {
           return ctxt.Init(minOutputLatency);
