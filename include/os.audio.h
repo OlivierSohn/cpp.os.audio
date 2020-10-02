@@ -25,11 +25,11 @@ namespace imajuscule {
         ~Audio() = default;
         static Audio * gInstance;
 
-        #ifndef NO_AUDIO_IN
-        sensor::AudioIn audioIn;
-        #endif
+#ifndef NO_AUDIO_IN
+        sensor::AudioIn audioIn{SAMPLE_RATE};
+#endif
 
-        audio::AudioOut audioOut{SAMPLE_RATE};
+        audio::AudioOut audioOut;
 
         bool doInit(OutInitPolicy);
         void doTearDown();

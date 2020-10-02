@@ -14,9 +14,10 @@ struct Instrument {
   static constexpr auto n_mnc = Inst::n_channels;
   using mnc_buffer = typename Inst::MonoNoteChannel::buffer_t;
   
-  Instrument(OUT & out, int sample_rate) :
-  instrument(std::make_unique<Inst>(sample_rate, buffers))
-  , out(out) {
+  Instrument(OUT & out, int sample_rate)
+  : instrument(std::make_unique<Inst>(buffers))
+  , out(out)
+  , sample_rate_(sample_rate) {
     instrument->initializeSlow();
     instrument->initialize(*getFirstXFadeChans());
   }
@@ -66,10 +67,12 @@ private:
   float pan = 0.f;
   int program = 0;
   Midi midi;
+  int sample_rate_;
   
   void playOne() {
     ++n_notes;
-    audio::playOneThing(midi,
+    audio::playOneThing(sample_rate_,
+                        midi,
                         *instrument,
                         out,
                         *getFirstXFadeChans(),

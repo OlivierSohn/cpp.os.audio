@@ -11,7 +11,9 @@ constexpr static const float maxFreq = 440.f; // in herz (also based on my voice
 // and we want to have at least 3 samplings per period of max frequency, so:
 constexpr static const float samples_per_max_freq_period = 8.f;
 constexpr static const float time_between_representative_samples = 1.f / (samples_per_max_freq_period * maxFreq);
-constexpr static const int sampling_period = (int)(((float)SAMPLE_RATE) * time_between_representative_samples + 0.5f);
+constexpr static const int sampling_period(int sample_rate) {
+  return (int)(((float)sample_rate) * time_between_representative_samples + 0.5f);
+}
 
 
 // declared NO_LOCK to share Lock between multiple algorithms
@@ -35,29 +37,32 @@ struct FreqFromZC : public Sensor<FreqFromZC, NO_LOCK, float>
   
   void reset()
   {
-    // dont reset resultFreq_ !
+    // don't reset resultFreq_ !
     
     signal_range.set(0.f,0.f);
     positive_zeros_dist.reset();
     acc = 0;
     bWasNeg = true;
-    counter = sampling_period;
+    counter = sampling_period(sample_rate);
   }
   
-  FreqFromZC(std::atomic_flag &a)
+  FreqFromZC(int sampleRate, std::atomic_flag &a)
   : Sensor<FreqFromZC, NO_LOCK, float>(&a)
   , positive_zeros_dist(16)
   , signal_range(0.f,0.f)
   , bWasNeg(true)
+  , sample_rate(sampleRate)
+  , counter(sampling_period(sampleRate))
+  , sampling_period_(sampling_period(sampleRate))
   {
-    filter_.initWithFreq(((float)SAMPLE_RATE)/(float)sampling_period,
+    filter_.initWithFreq(1.f/time_between_representative_samples,
                          50.f/(2.f*M_PI));
   }
   
   void feed(SAMPLE val)
   {
     counter++;
-    if(counter < sampling_period) {
+    if (counter < sampling_period_) {
       return;
     }
     counter = 0;
@@ -82,7 +87,8 @@ struct FreqFromZC : public Sensor<FreqFromZC, NO_LOCK, float>
   InternalResult compute(float & f);
   
 private:
-  int32_t counter = sampling_period;
+  int32_t counter;
+  int32_t sampling_period_;
   audio::Filter<float, 1, audio::FilterType::HIGH_PASS> filter_;
   
   cyclic<int> positive_zeros_dist; // zero crossing intervals are recorded over several time steps
@@ -90,6 +96,7 @@ private:
   bool bWasNeg : 1;
   
   range<float> signal_range; // range is representative of a single time step (except for very first calculation of a series)
+  int sample_rate;
   
   std::string const name = std::string("AUF");
 };
@@ -126,8 +133,8 @@ struct paTestData
 {
   static constexpr auto sizeSlidingAverage = 160;
   
-  paTestData( Activator & a ) :
-  algo_freq(used)
+  paTestData( int sample_rate, Activator & a ) :
+  algo_freq(sample_rate, used)
   , algo_max(used)
   , avg(sizeSlidingAverage)
   , activator(a)
@@ -167,14 +174,17 @@ protected:
   bool do_sleep() override;
 private:
   static constexpr auto AUDIO_UNUSED_FRAME_COUNT_FOR_SLEEP = 689; // is 1s. when 64 frames / callback
-  AudioIn() : Activator ( AUDIO_UNUSED_FRAME_COUNT_FOR_SLEEP ),
-  data( *this ),
-  bInitialized_(false)
-  {};
+
+  AudioIn(int sampleRate)
+  : Activator (AUDIO_UNUSED_FRAME_COUNT_FOR_SLEEP)
+  , data( sampleRate, *this )
+  , bInitialized_(false)
+  , sample_rate(sampleRate)
+  {}
   
   bool bInitialized_ : 1;
   audio::AudioInput<AudioPlat> audio_input;
-  
+  int sample_rate;
   paTestData data;
 };
 

@@ -22,14 +22,16 @@ void Audio::TearDown() {
 }
 
 bool Audio::doInit(OutInitPolicy p) {
-  imajuscule::audio::overridePortaudioMinLatencyMillis(4); // TODO adapt to minLatency?
+  // why was this implemented??
+  //imajuscule::audio::overridePortaudioMinLatencyMillis(4); // TODO adapt to minLatency?
   
   bool res = true;
 #ifndef NO_AUDIO_IN
   res = audioIn.Init() && res;
 #endif
   if(p == OutInitPolicy::FORCE) {
-    res = audioOut.Init(audio::AudioOut::AudioCtxt::minLazyLatency) && res;
+    res = audioOut.Init(audio::AudioOut::AudioCtxt::lazySamplingRate,
+                        audio::AudioOut::AudioCtxt::minLazyLatency) && res;
   }
   return res;
 }

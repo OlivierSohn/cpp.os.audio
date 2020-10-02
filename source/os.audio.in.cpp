@@ -55,7 +55,7 @@ bool AudioIn::do_wakeup() {
   LG(INFO, "AudioIn::do_wakeup : AudioIn will wake up");
   bool const res = audio_input.Init([this](const SAMPLE * buffer, int nFrames) {
     data.step(buffer, nFrames);
-  }, SAMPLE_RATE);
+  }, sample_rate);
   if (res) {
     LG(INFO, "AudioIn::do_wakeup : AudioIn is woken up");
   }
@@ -272,7 +272,7 @@ InternalResult FreqFromZC::computeWhileLocked(float & f)
         if(data.count == (int32_t)positive_zeros_dist.size() || delta > upperZero )
         {
             auto candidate = ((float)data.count) / ((float)data.total);
-            candidate *= ((float)SAMPLE_RATE)/(float)sampling_period;
+            candidate /= time_between_representative_samples;
             if(candidate < minFreq )
             {
                 //LG(INFO,"%.4f < %.4f : discarded", candidate, minFreq);
