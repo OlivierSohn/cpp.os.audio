@@ -175,16 +175,18 @@ protected:
 private:
   static constexpr auto AUDIO_UNUSED_FRAME_COUNT_FOR_SLEEP = 689; // is 1s. when 64 frames / callback
 
-  AudioIn(int sampleRate)
+  AudioIn(int sampleRate, float minLatency)
   : Activator (AUDIO_UNUSED_FRAME_COUNT_FOR_SLEEP)
   , data( sampleRate, *this )
   , bInitialized_(false)
   , sample_rate(sampleRate)
+  , min_latency(minLatency)
   {}
   
   bool bInitialized_ : 1;
   audio::AudioInput<AudioPlat> audio_input;
   int sample_rate;
+  double min_latency;
   paTestData data;
 };
 

@@ -55,7 +55,7 @@ bool AudioIn::do_wakeup() {
   LG(INFO, "AudioIn::do_wakeup : AudioIn will wake up");
   bool const res = audio_input.Init([this](const SAMPLE * buffer, int nFrames) {
     data.step(buffer, nFrames);
-  }, sample_rate);
+  }, sample_rate, min_latency);
   if (res) {
     LG(INFO, "AudioIn::do_wakeup : AudioIn is woken up");
   }
