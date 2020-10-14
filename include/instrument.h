@@ -12,14 +12,13 @@ struct Instrument {
   static constexpr auto xfade_policy = INST::xfade_policy;
   
   static constexpr auto n_mnc = Inst::n_channels;
-  using mnc_buffer = typename Inst::MonoNoteChannel::buffer_t;
   
   Instrument(OUT & out, int sample_rate)
-  : instrument(std::make_unique<Inst>(buffers))
+  : instrument(std::make_unique<Inst>())
   , out(out)
   , sample_rate_(sample_rate) {
     instrument->initializeSlow();
-    instrument->initialize(*getFirstXFadeChans());
+    instrument->initialize(out);
   }
   
   void startOneNote() { playOne(); }
@@ -57,7 +56,6 @@ struct Instrument {
   auto const & getPrograms() const { return instrument->getPrograms(); }
 private:
   OUT & out;
-  std::array<mnc_buffer,n_mnc> buffers;
   std::unique_ptr<INST> instrument;
   float volume = 1.f;
   int n_notes = 0;
@@ -75,7 +73,6 @@ private:
                         midi,
                         *instrument,
                         out,
-                        *getFirstXFadeChans(),
                         audio::Voicing{ program, midiPitch, volume, pan, random, seed});
     
   }
