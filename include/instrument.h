@@ -9,8 +9,6 @@ template<typename OUT, typename INST>
 struct Instrument {
   
   using Inst = INST;
-  static constexpr auto xfade_policy = INST::xfade_policy;
-  
   static constexpr auto n_mnc = Inst::n_channels;
   
   Instrument(OUT & out, int sample_rate)
@@ -50,7 +48,10 @@ struct Instrument {
   OUT& getOut() { return out; }
   
   bool isPlaying() {
-    return getFirstXFadeChans()->hasRealtimeFunctions();
+    if (auto c = getFirstChan()) {
+      return c->hasRealtimeFunctions();
+    }
+    return false;
   }
   
   auto const & getPrograms() const { return instrument->getPrograms(); }
@@ -76,26 +77,11 @@ private:
                         audio::Voicing{ program, midiPitch, volume, pan, random, seed});
     
   }
-  /*
-   auto & getFirstNoXFadeChans() {
-   auto p = out.getChannels().getChannelsNoXFade()[0].get();
-   Assert(p);
-   return *p;
-   }*/
-  using Ret = std::conditional_t<
-  xfade_policy == XfadePolicy::UseXfade,
-  typename OUT::ChannelsT::XFadeChans,
-  typename OUT::ChannelsT::NoXFadeChans>;
-  Ret * getFirstXFadeChans() {
-    if constexpr (xfade_policy == XfadePolicy::UseXfade) {
-      if(auto m = out.getChannels().getChannelsXFade().maybe_front()) {
-        return &get_value(m).first;
-      }
-    }
-    else {
-      if(auto m = out.getChannels().getChannelsNoXFade().maybe_front()) {
-        return &get_value(m).first;
-      }
+
+  typename OUT::ChannelsT::NoXFadeChans *
+  getFirstChan() {
+    if(auto m = out.getChannels().getChannelsNoXFade().maybe_front()) {
+      return &get_value(m).first;
     }
     return {};
   }
