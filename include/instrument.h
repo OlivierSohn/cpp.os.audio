@@ -69,12 +69,12 @@ private:
   int sample_rate_;
   
   void playOne() {
-    ++n_notes;
     audio::playOneThing(sample_rate_,
                         midi,
                         *instrument,
                         out,
-                        audio::Voicing{ program, midiPitch, volume, pan, random, seed});
+                        audio::Voicing{ program, midiPitch, volume, pan, random, seed},
+                        audio::NoteId{n_notes++});
     
   }
 
